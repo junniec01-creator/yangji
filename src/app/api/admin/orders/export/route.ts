@@ -1,11 +1,8 @@
 import type { NextRequest } from "next/server";
-import { formatKst, toCsv } from "@/lib/csv";
+import { toCsv } from "@/lib/csv";
+import { formatKst } from "@/lib/kst";
 import { fetchOrders } from "@/lib/order-queries";
-import {
-  ORDER_STATUSES,
-  ORDER_STATUS_LABEL,
-  type OrderStatus,
-} from "@/lib/orders";
+import { ORDER_STATUS_LABEL, parseOrderFilter } from "@/lib/orders";
 import { BOX_OPTIONS } from "@/lib/products";
 import { requireAdmin } from "@/lib/supabase-auth";
 
@@ -35,12 +32,8 @@ const HEADERS = [
 export async function GET(request: NextRequest) {
   await requireAdmin();
 
-  const statusParam = request.nextUrl.searchParams.get("status");
-  const status = ORDER_STATUSES.includes(statusParam as OrderStatus)
-    ? (statusParam as OrderStatus)
-    : undefined;
-
-  const orders = await fetchOrders(status);
+  const filter = parseOrderFilter(request.nextUrl.searchParams.get("status"));
+  const orders = await fetchOrders(filter);
 
   const rows = orders.map((order) => [
     order.order_no,
@@ -63,7 +56,7 @@ export async function GET(request: NextRequest) {
     order.memo,
   ]);
 
-  const filename = `orders-${status ?? "all"}-${formatKst(new Date().toISOString()).slice(0, 10)}.csv`;
+  const filename = `orders-${filter ?? "all"}-${formatKst(new Date().toISOString()).slice(0, 10)}.csv`;
 
   return new Response(toCsv(HEADERS, rows), {
     headers: {

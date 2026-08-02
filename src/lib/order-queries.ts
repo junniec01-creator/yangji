@@ -1,5 +1,10 @@
 import "server-only";
-import type { OrderStatus } from "@/lib/orders";
+import {
+  UNSHIPPED,
+  UNSHIPPED_STATUSES,
+  type OrderFilter,
+  type OrderStatus,
+} from "@/lib/orders";
 import type { BoxId } from "@/lib/products";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -29,15 +34,19 @@ export interface OrderRow {
 const COLUMNS =
   "id, order_no, status, orderer_name, orderer_phone, depositor_name, box_id, quantity, unit_price, shipping_fee, total_price, recipient_same, recipient_name, recipient_phone, postcode, address1, address2, is_remote_area, memo, created_at";
 
-/** 최신 주문부터. status를 주면 해당 상태만 걸러낸다. */
-export async function fetchOrders(status?: OrderStatus): Promise<OrderRow[]> {
+/** 최신 주문부터. filter를 주면 해당 상태만 걸러낸다. */
+export async function fetchOrders(filter?: OrderFilter): Promise<OrderRow[]> {
   const supabase = createServiceClient();
   let query = supabase
     .from("orders")
     .select(COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (status) query = query.eq("status", status);
+  if (filter === UNSHIPPED) {
+    query = query.in("status", [...UNSHIPPED_STATUSES]);
+  } else if (filter) {
+    query = query.eq("status", filter);
+  }
 
   const { data, error } = await query;
 
@@ -55,19 +64,40 @@ export interface OrderSummary {
   totalCount: number;
   /** 취소를 뺀 박스 개수 합계 — 실제로 몇 박스를 따야 하는지. */
   totalBoxes: number;
+  pendingCount: number;
+  pendingBoxes: number;
+  paidCount: number;
+  paidBoxes: number;
   shippedCount: number;
   shippedBoxes: number;
+  /** 아직 부치지 않은 주문 = 입금 대기 + 입금 확인. */
+  unshippedCount: number;
+  unshippedBoxes: number;
+  /** 입금이 확인된 물량 = 입금 확인 + 발송 완료. */
+  depositedCount: number;
+  depositedBoxes: number;
   /** 취소를 뺀 금액 합계. */
   revenue: number;
+  /** 입금이 확인된 금액 합계. */
+  depositedRevenue: number;
 }
 
 const EMPTY_SUMMARY: OrderSummary = {
   counts: {},
   totalCount: 0,
   totalBoxes: 0,
+  pendingCount: 0,
+  pendingBoxes: 0,
+  paidCount: 0,
+  paidBoxes: 0,
   shippedCount: 0,
   shippedBoxes: 0,
+  unshippedCount: 0,
+  unshippedBoxes: 0,
+  depositedCount: 0,
+  depositedBoxes: 0,
   revenue: 0,
+  depositedRevenue: 0,
 };
 
 /** 필터와 무관하게 전체 주문을 기준으로 낸 집계. */
@@ -93,9 +123,28 @@ export async function fetchOrderSummary(): Promise<OrderSummary> {
     summary.totalBoxes += row.quantity;
     summary.revenue += row.total_price;
 
-    if (row.status === "shipped") {
+    if (row.status === "pending") {
+      summary.pendingCount += 1;
+      summary.pendingBoxes += row.quantity;
+    } else if (row.status === "paid") {
+      summary.paidCount += 1;
+      summary.paidBoxes += row.quantity;
+    } else {
       summary.shippedCount += 1;
       summary.shippedBoxes += row.quantity;
+    }
+
+    // 아직 부치지 않은 물량 = 입금 대기 + 입금 확인
+    if (row.status !== "shipped") {
+      summary.unshippedCount += 1;
+      summary.unshippedBoxes += row.quantity;
+    }
+
+    // 돈이 들어온 물량 = 입금 확인 + 발송 완료
+    if (row.status !== "pending") {
+      summary.depositedCount += 1;
+      summary.depositedBoxes += row.quantity;
+      summary.depositedRevenue += row.total_price;
     }
   }
 

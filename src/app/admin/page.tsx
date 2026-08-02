@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signOut, updateOrderStatus } from "@/app/admin/actions";
+import { updateOrderStatus } from "@/app/admin/actions";
+import { AdminHeader } from "@/app/admin/admin-header";
 import { DeleteOrderButton } from "@/app/admin/delete-order-button";
 import { SettingsForm } from "@/app/admin/settings-form";
-import { BrandMark } from "@/components/brand-mark";
-import { formatKst } from "@/lib/csv";
+import { StatCard } from "@/app/admin/stat-card";
+import { formatKst } from "@/lib/kst";
 import { fetchOrderSummary, fetchOrders } from "@/lib/order-queries";
 import {
-  ORDER_STATUSES,
+  ORDER_FILTERS,
+  ORDER_FILTER_LABEL,
   ORDER_STATUS_LABEL,
+  ORDER_STATUSES,
+  UNSHIPPED,
+  parseOrderFilter,
+  type OrderFilter,
   type OrderStatus,
 } from "@/lib/orders";
-import { BOX_OPTIONS, SITE, formatPrice } from "@/lib/products";
+import { BOX_OPTIONS, formatPrice } from "@/lib/products";
 import { getSiteSettings } from "@/lib/site-settings";
 import { requireAdmin } from "@/lib/supabase-auth";
 
@@ -37,53 +43,37 @@ export default async function AdminPage({
   await requireAdmin();
 
   const { status: statusParam } = await searchParams;
-  const status = ORDER_STATUSES.includes(statusParam as OrderStatus)
-    ? (statusParam as OrderStatus)
-    : undefined;
+  const filter = parseOrderFilter(statusParam);
 
   const [orders, summary, settings] = await Promise.all([
-    fetchOrders(status),
+    fetchOrders(filter),
     fetchOrderSummary(),
     getSiteSettings(),
   ]);
 
-  const exportHref = status
-    ? `/api/admin/orders/export?status=${status}`
-    : "/api/admin/orders/export";
+  const filterCount = (value: OrderFilter) =>
+    value === UNSHIPPED ? summary.unshippedCount : (summary.counts[value] ?? 0);
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <BrandMark className="h-7 w-7" />
-          <h1 className="font-display text-xl font-bold text-bark-900">
-            {SITE.farmName} 주문 관리
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="text-sm text-bark-400 transition-colors hover:text-bark-900"
-          >
-            사이트 보기
-          </Link>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-full px-4 py-2 text-sm text-bark-500 ring-1 ring-cream-300 transition-colors hover:text-bark-900"
-            >
-              로그아웃
-            </button>
-          </form>
-        </div>
-      </header>
+      <AdminHeader current="/admin" />
 
-      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard label="총 주문" value={`${summary.totalCount}건`} />
         <StatCard
           label="총 주문 수량"
           value={`${summary.totalBoxes}박스`}
           hint="취소 제외"
+        />
+        <StatCard
+          label="입금 확인 수량"
+          value={`${summary.depositedBoxes}박스`}
+          hint={`${summary.depositedCount}건 · 발송 완료 포함`}
+        />
+        <StatCard
+          label="남은 발송 수량"
+          value={`${summary.unshippedBoxes}박스`}
+          hint={`입금 확인 ${summary.paidBoxes} · 입금 대기 ${summary.pendingBoxes}박스`}
         />
         <StatCard
           label="발송 완료"
@@ -93,7 +83,7 @@ export default async function AdminPage({
         <StatCard
           label="합계 금액"
           value={formatPrice(summary.revenue)}
-          hint="취소 제외"
+          hint={`입금 확인 ${formatPrice(summary.depositedRevenue)}`}
         />
       </div>
 
@@ -107,31 +97,41 @@ export default async function AdminPage({
         )}
       </div>
 
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-        <nav className="flex flex-wrap gap-2">
+      <nav className="mt-10 flex flex-wrap gap-2">
+        <FilterTab
+          href="/admin"
+          label="전체"
+          count={summary.totalCount}
+          active={!filter}
+        />
+        {ORDER_FILTERS.map((value) => (
           <FilterTab
-            href="/admin"
-            label="전체"
-            count={summary.totalCount}
-            active={!status}
+            key={value}
+            href={`/admin?status=${value}`}
+            label={ORDER_FILTER_LABEL[value]}
+            count={filterCount(value)}
+            active={filter === value}
           />
-          {ORDER_STATUSES.map((value) => (
-            <FilterTab
-              key={value}
-              href={`/admin?status=${value}`}
-              label={ORDER_STATUS_LABEL[value]}
-              count={summary.counts[value] ?? 0}
-              active={status === value}
-            />
-          ))}
-        </nav>
+        ))}
+      </nav>
 
-        <a
-          href={exportHref}
-          className="inline-flex h-10 items-center justify-center rounded-full bg-peach-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-peach-600"
-        >
+      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-cream-100/70 px-4 py-3 ring-1 ring-cream-200">
+        <span className="mr-1 text-xs font-semibold text-bark-500">
           CSV 내려받기
-        </a>
+        </span>
+        <CsvLink
+          href="/api/admin/orders/export"
+          label="전체"
+          count={summary.totalCount}
+        />
+        {ORDER_FILTERS.map((value) => (
+          <CsvLink
+            key={value}
+            href={`/api/admin/orders/export?status=${value}`}
+            label={ORDER_FILTER_LABEL[value]}
+            count={filterCount(value)}
+          />
+        ))}
       </div>
 
       <div className="mt-5 space-y-4">
@@ -231,26 +231,6 @@ export default async function AdminPage({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white px-5 py-4 ring-1 ring-cream-200">
-      <p className="text-xs text-bark-400">{label}</p>
-      <p className="mt-1.5 text-xl font-semibold text-bark-900 tabular-nums">
-        {value}
-      </p>
-      {hint && <p className="mt-0.5 text-xs text-bark-300">{hint}</p>}
-    </div>
-  );
-}
-
 function FilterTab({
   href,
   label,
@@ -273,6 +253,26 @@ function FilterTab({
     >
       {label} <span className="tabular-nums">{count}</span>
     </Link>
+  );
+}
+
+function CsvLink({
+  href,
+  label,
+  count,
+}: {
+  href: string;
+  label: string;
+  count: number;
+}) {
+  return (
+    <a
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-bark-600 ring-1 ring-cream-300 transition-colors hover:text-peach-700 hover:ring-peach-300"
+    >
+      {label}
+      <span className="text-bark-300 tabular-nums">{count}</span>
+    </a>
   );
 }
 

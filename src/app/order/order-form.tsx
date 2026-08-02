@@ -356,35 +356,49 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
 
             <Field
               label="주소"
-              htmlFor="postcode"
+              htmlFor="addressSearch"
               required
-              error={errors.postcode ?? errors.address1}
+              error={errors.postcode ?? errors.address1 ?? errors.address2}
             >
-              <div className="flex gap-3">
-                <input
-                  id="postcode"
-                  name="postcode"
-                  value={postcode}
-                  readOnly
-                  placeholder="우편번호"
-                  className={`${inputClass(Boolean(errors.postcode))} w-32 shrink-0 cursor-default bg-cream-50 tabular-nums`}
-                />
+              {/* 주소는 검색으로만 채운다. 표시 칸 아무 곳이나 눌러도 열린다. */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  id="addressSearch"
+                  onClick={() => setPostcodeOpen(true)}
+                  disabled={!postcodeReady}
+                  className={`flex min-w-0 flex-1 items-center rounded-xl bg-white px-4 py-3 text-left outline-none ring-1 transition-shadow disabled:opacity-60 ${
+                    errors.postcode ?? errors.address1
+                      ? "ring-red-400"
+                      : "ring-cream-300 hover:ring-peach-300 focus-visible:ring-2 focus-visible:ring-peach-400"
+                  }`}
+                >
+                  {address1 ? (
+                    <span className="truncate text-bark-800">
+                      <span className="text-bark-400 tabular-nums">
+                        ({postcode})
+                      </span>{" "}
+                      {address1}
+                    </span>
+                  ) : (
+                    <span className="truncate text-bark-300">
+                      눌러서 주소를 검색해 주세요
+                    </span>
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={() => setPostcodeOpen(true)}
                   disabled={!postcodeReady}
-                  className="shrink-0 rounded-xl bg-bark-900 px-5 text-sm font-medium text-white transition-colors hover:bg-bark-800 disabled:opacity-40"
+                  className="shrink-0 rounded-xl bg-bark-900 px-4 text-sm font-medium text-white transition-colors hover:bg-bark-800 disabled:opacity-40"
                 >
                   주소 찾기
                 </button>
               </div>
-              <input
-                name="address1"
-                value={address1}
-                readOnly
-                placeholder="주소 찾기를 눌러 주세요"
-                className={`${inputClass(Boolean(errors.address1))} mt-3 cursor-default bg-cream-50`}
-              />
+
+              <input type="hidden" name="postcode" value={postcode} />
+              <input type="hidden" name="address1" value={address1} />
+
               <input
                 name="address2"
                 value={form.address2}

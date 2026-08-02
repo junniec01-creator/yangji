@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
+import { MobileNav, type NavItem } from "@/components/mobile-nav";
 import { SITE } from "@/lib/products";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: readonly NavItem[] = [
   { href: "/#peaches", label: "복숭아 소개" },
   { href: "/#boxes", label: "박스 규격" },
   { href: "/#guide", label: "주문·배송" },
@@ -35,12 +36,15 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <Link
-          href="/order"
-          className="hidden h-10 items-center rounded-full bg-bark-900 px-5 text-sm font-medium text-cream-50 transition-colors hover:bg-bark-800 sm:inline-flex"
-        >
-          주문하기
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/order"
+            className="hidden h-10 items-center rounded-full bg-bark-900 px-5 text-sm font-medium text-cream-50 transition-colors hover:bg-bark-800 sm:inline-flex"
+          >
+            주문하기
+          </Link>
+          <MobileNav items={NAV_ITEMS} />
+        </div>
       </div>
     </header>
   );

@@ -16,6 +16,37 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "취소",
 };
 
+/**
+ * 목록·CSV 필터에는 실제 상태 외에 "남은 발송"이라는 가상 값을 하나 더 둔다.
+ * 아직 부치지 않은 주문(입금 대기 + 입금 확인)을 한 번에 보기 위해서다.
+ */
+export const UNSHIPPED = "unshipped";
+
+export const UNSHIPPED_STATUSES: readonly OrderStatus[] = ["pending", "paid"];
+
+export type OrderFilter = OrderStatus | typeof UNSHIPPED;
+
+export const ORDER_FILTERS: readonly OrderFilter[] = [
+  UNSHIPPED,
+  ...ORDER_STATUSES,
+];
+
+export const ORDER_FILTER_LABEL: Record<OrderFilter, string> = {
+  ...ORDER_STATUS_LABEL,
+  [UNSHIPPED]: "남은 발송",
+};
+
+/** 쿼리스트링 값을 필터로 바꾼다. 알 수 없는 값이면 undefined(= 전체). */
+export function parseOrderFilter(
+  value: string | null | undefined,
+): OrderFilter | undefined {
+  if (!value) return undefined;
+  if (value === UNSHIPPED) return UNSHIPPED;
+  return ORDER_STATUSES.includes(value as OrderStatus)
+    ? (value as OrderStatus)
+    : undefined;
+}
+
 export const MAX_QUANTITY = 20;
 
 export function isBoxId(value: string): value is BoxId {
