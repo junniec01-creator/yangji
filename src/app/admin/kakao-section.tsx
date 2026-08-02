@@ -24,10 +24,12 @@ export function KakaoSection({
   recipients,
   configured,
   result,
+  reason,
 }: {
   recipients: KakaoRecipient[];
   configured: boolean;
   result?: string;
+  reason?: string;
 }) {
   const notice = result ? RESULT_MESSAGE[result] : undefined;
 
@@ -50,6 +52,13 @@ export function KakaoSection({
           </p>
         )}
       </div>
+
+      {/* 카카오가 돌려준 사유. 콘솔 설정을 고쳐야 풀리는 경우가 대부분이다. */}
+      {notice && !notice.ok && reason && (
+        <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 font-mono text-xs break-all text-red-700 ring-1 ring-red-200">
+          {reason}
+        </p>
+      )}
 
       <p className="mt-3 text-sm leading-relaxed text-bark-500 break-keep">
         주문 확인 화면에서 <strong className="text-bark-700">입금 확인</strong>을

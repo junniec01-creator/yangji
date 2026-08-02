@@ -63,11 +63,31 @@ interface TokenResponse {
   expires_in: number;
 }
 
+/**
+ * 실패했을 때 이유를 그대로 들고 다닌다.
+ * 카카오 쪽 오류는 콘솔 설정을 고쳐야 풀리는 경우가 대부분이라,
+ * 로그에만 남기지 않고 관리자 화면까지 올려 보낸다.
+ */
+export type KakaoResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: string };
+
+/** 카카오가 돌려준 오류 본문에서 사람이 읽을 부분만 뽑는다. */
+function describeError(status: number, payload: unknown): string {
+  if (payload && typeof payload === "object") {
+    const body = payload as Record<string, unknown>;
+    const code = body.error_code ?? body.code ?? body.error;
+    const detail = body.error_description ?? body.msg;
+    if (code || detail) return [code, detail].filter(Boolean).join(" · ");
+  }
+  return `HTTP ${status}`;
+}
+
 async function requestToken(
   body: Record<string, string>,
-): Promise<TokenResponse | null> {
+): Promise<KakaoResult<TokenResponse>> {
   const restKey = getKakaoRestKey();
-  if (!restKey) return null;
+  if (!restKey) return { ok: false, reason: "앱 키 없음" };
 
   const params = new URLSearchParams({ client_id: restKey, ...body });
   const secret = process.env.KAKAO_CLIENT_SECRET;
@@ -84,24 +104,22 @@ async function requestToken(
     const payload = await response.json();
 
     if (!response.ok) {
-      console.error(
-        "카카오 토큰 요청 실패:",
-        `${response.status} ${JSON.stringify(payload)}`,
-      );
-      return null;
+      const reason = describeError(response.status, payload);
+      console.error("카카오 토큰 요청 실패:", reason);
+      return { ok: false, reason };
     }
 
-    return payload as TokenResponse;
+    return { ok: true, value: payload as TokenResponse };
   } catch (cause) {
-    console.error(
-      "카카오 토큰 요청 실패:",
-      cause instanceof Error ? cause.message : cause,
-    );
-    return null;
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    console.error("카카오 토큰 요청 실패:", reason);
+    return { ok: false, reason };
   }
 }
 
-export async function exchangeCode(code: string): Promise<TokenResponse | null> {
+export async function exchangeCode(
+  code: string,
+): Promise<KakaoResult<TokenResponse>> {
   return requestToken({
     grant_type: "authorization_code",
     redirect_uri: getKakaoRedirectUri(),
@@ -109,35 +127,43 @@ export async function exchangeCode(code: string): Promise<TokenResponse | null> 
   });
 }
 
-/** 카카오 회원번호와 닉네임. 수신자를 화면에 구분해 보여주려고 읽는다. */
+/**
+ * 카카오 회원번호와 닉네임.
+ * 닉네임은 프로필 동의항목이 꺼져 있으면 비어서 오는데, 그래도 회원번호만
+ * 있으면 알림을 보내는 데는 지장이 없으므로 실패로 보지 않는다.
+ */
 export async function fetchKakaoProfile(
   accessToken: string,
-): Promise<{ id: string; nickname: string } | null> {
+): Promise<KakaoResult<{ id: string; nickname: string }>> {
   try {
-    const response = await fetch(
-      `${API_HOST}/v2/user/me?secure_resource=true`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      },
-    );
-
-    if (!response.ok) {
-      console.error("카카오 프로필 조회 실패:", String(response.status));
-      return null;
-    }
+    const response = await fetch(`${API_HOST}/v2/user/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    });
 
     const payload = await response.json();
+
+    if (!response.ok) {
+      const reason = describeError(response.status, payload);
+      console.error("카카오 프로필 조회 실패:", reason);
+      return { ok: false, reason };
+    }
+
+    const properties = payload.properties as
+      | Record<string, unknown>
+      | undefined;
+
     return {
-      id: String(payload.id),
-      nickname: String(payload.properties?.nickname ?? ""),
+      ok: true,
+      value: {
+        id: String(payload.id),
+        nickname: String(properties?.nickname ?? ""),
+      },
     };
   } catch (cause) {
-    console.error(
-      "카카오 프로필 조회 실패:",
-      cause instanceof Error ? cause.message : cause,
-    );
-    return null;
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    console.error("카카오 프로필 조회 실패:", reason);
+    return { ok: false, reason };
   }
 }
 
@@ -221,16 +247,17 @@ export async function ensureAccessToken(
     return recipient.access_token;
   }
 
-  const token = await requestToken({
+  const result = await requestToken({
     grant_type: "refresh_token",
     refresh_token: recipient.refresh_token,
   });
 
-  if (!token) {
-    await markError(recipient.id, "토큰 갱신에 실패했습니다. 다시 연결해 주세요.");
+  if (!result.ok) {
+    await markError(recipient.id, `토큰 갱신 실패 (${result.reason})`);
     return null;
   }
 
+  const token = result.value;
   const supabase = createServiceClient();
   const patch: Record<string, string> = {
     access_token: token.access_token,

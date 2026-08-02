@@ -26,9 +26,13 @@ export async function GET(request: NextRequest) {
 
   // redirect는 예외를 던지므로 결과를 먼저 정한 뒤 마지막에 한 번만 호출한다.
   let result = "ok";
+  let reason = "";
 
   if (params.get("error")) {
-    console.error("카카오 연결 거부:", params.get("error") ?? "");
+    reason = [params.get("error"), params.get("error_description")]
+      .filter(Boolean)
+      .join(" · ");
+    console.error("카카오 연결 거부:", reason);
     result = "denied";
   } else {
     const code = params.get("code");
@@ -38,22 +42,36 @@ export async function GET(request: NextRequest) {
       result = "state";
     } else {
       const token = await exchangeCode(code);
-      const profile = token ? await fetchKakaoProfile(token.access_token) : null;
 
-      if (!token || !profile) {
+      if (!token.ok) {
         result = "fail";
+        reason = token.reason;
       } else {
-        const saved = await upsertRecipient({
-          kakaoUserId: profile.id,
-          nickname: profile.nickname,
-          refreshToken: token.refresh_token ?? "",
-          accessToken: token.access_token,
-          expiresIn: token.expires_in,
-        });
-        result = saved ? "ok" : "fail";
+        const profile = await fetchKakaoProfile(token.value.access_token);
+
+        if (!profile.ok) {
+          result = "fail";
+          reason = profile.reason;
+        } else {
+          const saved = await upsertRecipient({
+            kakaoUserId: profile.value.id,
+            nickname: profile.value.nickname,
+            refreshToken: token.value.refresh_token ?? "",
+            accessToken: token.value.access_token,
+            expiresIn: token.value.expires_in,
+          });
+
+          if (!saved) {
+            result = "fail";
+            reason = "수신자 저장 실패 (DB)";
+          }
+        }
       }
     }
   }
 
-  redirect(`/admin/settings?kakao=${result}`);
+  const query = new URLSearchParams({ kakao: result });
+  if (reason) query.set("why", reason.slice(0, 160));
+
+  redirect(`/admin/settings?${query}`);
 }

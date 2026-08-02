@@ -16,13 +16,13 @@ export const dynamic = "force-dynamic";
 export default async function AdminSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kakao?: string }>;
+  searchParams: Promise<{ kakao?: string; why?: string }>;
 }) {
   await requireAdmin();
 
   const configured = isKakaoConfigured();
 
-  const [{ kakao }, settings, recipients] = await Promise.all([
+  const [{ kakao, why }, settings, recipients] = await Promise.all([
     searchParams,
     getSiteSettings(),
     configured ? listRecipients() : Promise.resolve([]),
@@ -45,6 +45,7 @@ export default async function AdminSettingsPage({
           recipients={recipients}
           configured={configured}
           result={kakao}
+          reason={why}
         />
       </div>
     </div>
