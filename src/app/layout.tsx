@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Gowun_Batang, IBM_Plex_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/products";
+import { getSiteUrl } from "@/lib/site-url";
 
 // 한글 폰트는 Google Fonts가 unicode-range 단위로 쪼개어 제공한다.
 // next/font의 `subsets`에는 한글 서브셋 이름이 없으므로 `preload: false`로
@@ -21,11 +22,19 @@ const gowun = Gowun_Batang({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: `${SITE.farmName} · ${SITE.tagline}`,
     template: `%s | ${SITE.farmName}`,
   },
   description: SITE.description,
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: SITE.farmName,
+    title: `${SITE.farmName} · ${SITE.tagline}`,
+    description: SITE.description,
+  },
 };
 
 export const viewport: Viewport = {
