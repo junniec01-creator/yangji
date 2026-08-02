@@ -1,26 +1,44 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --font-sans: var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-noto-serif-kr), ui-serif, Georgia, serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 배경 · 종이 결 */
+  --color-cream-50: #fffcf8;
+  --color-cream-100: #fdf5ec;
+  --color-cream-200: #f7e8d8;
+  --color-cream-300: #eed9c4;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* 복숭아 과육 */
+  --color-peach-50: #fff5f1;
+  --color-peach-100: #ffe7de;
+  --color-peach-200: #ffcdbc;
+  --color-peach-300: #ffab92;
+  --color-peach-400: #fb8768;
+  --color-peach-500: #ef6a4b;
+  --color-peach-600: #d95033;
+  --color-peach-700: #b23e28;
+
+  /* 나뭇가지 — 본문 텍스트 */
+  --color-bark-400: #a8887a;
+  --color-bark-500: #8a6a5c;
+  --color-bark-600: #6b4f43;
+  --color-bark-700: #513a31;
+  --color-bark-800: #3a2822;
+  --color-bark-900: #271a16;
+
+  /* 잎 — 보조 포인트 */
+  --color-leaf-500: #6f8b5b;
+  --color-leaf-600: #57703f;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-cream-50);
+  color: var(--color-bark-800);
+}
+
+/* 폼 요소가 시스템 다크 모드를 따라가지 않도록 고정 */
+:root {
+  color-scheme: light;
 }
