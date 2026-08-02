@@ -27,14 +27,6 @@ export function SiteFooter() {
             <dt className="shrink-0 text-bark-400">주소</dt>
             <dd>{SITE.address}</dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="shrink-0 text-bark-400">사업자등록번호</dt>
-            <dd>{SITE.businessNumber}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="shrink-0 text-bark-400">통신판매업신고</dt>
-            <dd>{SITE.mailOrderNumber}</dd>
-          </div>
         </dl>
 
         <p className="mt-8 text-xs text-bark-400">
