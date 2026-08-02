@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import type { AdminFormState } from "@/app/admin/form-state";
+import { notifyAll, removeRecipient } from "@/lib/kakao";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/orders";
+import { BOX_OPTIONS, formatPrice } from "@/lib/products";
 import { createAuthClient, requireAdmin } from "@/lib/supabase-auth";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -18,8 +21,24 @@ function revalidateAdmin() {
   revalidatePath("/admin/orders");
 }
 
+interface MovedOrder {
+  order_no: string;
+  depositor_name: string;
+  box_id: string;
+  quantity: number;
+  total_price: number;
+  recipient_name: string;
+  recipient_phone: string;
+  postcode: string;
+  address1: string;
+  address2: string;
+}
+
+const MOVED_COLUMNS =
+  "order_no, depositor_name, box_id, quantity, total_price, recipient_name, recipient_phone, postcode, address1, address2";
+
 /**
- * 지금 상태가 from일 때만 to로 바꾸고, 실제로 바뀌었는지를 돌려준다.
+ * 지금 상태가 from일 때만 to로 바꾸고, 실제로 바뀐 주문을 돌려준다.
  *
  * 관리자가 여럿이라 같은 주문의 버튼을 동시에 누를 수 있다. 상태를 조건에
  * 걸어 두면 두 번째 요청은 0건 업데이트로 끝나므로, 알림도 한 번만 나간다.
@@ -28,32 +47,53 @@ async function transition(
   id: string,
   from: OrderStatus,
   to: OrderStatus,
-): Promise<boolean> {
+): Promise<MovedOrder | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("orders")
     .update({ status: to })
     .eq("id", id)
     .eq("status", from)
-    .select("id");
+    .select(MOVED_COLUMNS);
 
   if (error) {
     console.error("주문 상태 변경 실패:", error.message);
-    return false;
+    return null;
   }
 
-  return (data ?? []).length > 0;
+  return ((data ?? [])[0] as MovedOrder | undefined) ?? null;
 }
 
-/** 입금 대기 → 입금 확인 */
+/** 카카오 텍스트 템플릿은 200자를 넘길 수 없다. */
+function buildPaymentMessage(order: MovedOrder): string {
+  const box =
+    BOX_OPTIONS.find((option) => option.id === order.box_id)?.name ??
+    order.box_id;
+
+  const lines = [
+    `입금 확인 · ${order.order_no}`,
+    `${order.depositor_name} · ${box} × ${order.quantity}`,
+    formatPrice(order.total_price),
+    `받는 분 ${order.recipient_name} ${order.recipient_phone}`,
+    `(${order.postcode}) ${order.address1} ${order.address2}`.trim(),
+  ];
+
+  const text = lines.join("\n");
+  return text.length > 200 ? `${text.slice(0, 199)}…` : text;
+}
+
+/** 입금 대기 → 입금 확인. 실제로 바뀌었을 때만 관리자 전원에게 알린다. */
 export async function confirmPayment(formData: FormData) {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  await transition(id, "pending", "paid");
+  const moved = await transition(id, "pending", "paid");
   revalidateAdmin();
+
+  // 알림이 화면 반응을 붙잡지 않도록 응답 뒤로 미룬다.
+  if (moved) after(() => notifyAll(buildPaymentMessage(moved), "/admin?tab=ship"));
 }
 
 /** 입금 대기 → 취소 */
@@ -75,6 +115,21 @@ export async function markShipped(formData: FormData) {
   if (!id) return;
 
   await transition(id, "paid", "shipped");
+  revalidateAdmin();
+}
+
+/** 입금 확인된 주문을 한 번에 발송 완료로. */
+export async function markAllShipped() {
+  await requireAdmin();
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "shipped" })
+    .eq("status", "paid");
+
+  if (error) console.error("일괄 발송 처리 실패:", error.message);
+
   revalidateAdmin();
 }
 
@@ -110,6 +165,29 @@ export async function deleteOrder(formData: FormData) {
   if (error) console.error("주문 삭제 실패:", error.message);
 
   revalidateAdmin();
+}
+
+/** 설정 화면에서 수신자 하나를 뺀다. */
+export async function disconnectKakao(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await removeRecipient(id);
+  revalidatePath("/admin/settings");
+}
+
+/** 연결이 살아 있는지 눌러서 확인하는 용도. */
+export async function sendKakaoTest() {
+  await requireAdmin();
+
+  const { failed } = await notifyAll(
+    ["알림 연결 확인", "이 메시지가 보이면 정상입니다."].join("\n"),
+  );
+
+  revalidatePath("/admin/settings");
+  redirect(`/admin/settings?kakao=${failed > 0 ? "testfail" : "test"}`);
 }
 
 export async function updateSettings(

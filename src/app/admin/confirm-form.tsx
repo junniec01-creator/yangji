@@ -14,7 +14,8 @@ export function ConfirmForm({
   children,
 }: {
   action: (formData: FormData) => Promise<void>;
-  id: string;
+  /** 주문 하나를 대상으로 할 때만 넘긴다. 일괄 처리에는 필요 없다. */
+  id?: string;
   message: string;
   className?: string;
   children: ReactNode;
@@ -27,7 +28,7 @@ export function ConfirmForm({
         if (!confirm(message)) event.preventDefault();
       }}
     >
-      <input type="hidden" name="id" value={id} />
+      {id && <input type="hidden" name="id" value={id} />}
       {children}
     </form>
   );

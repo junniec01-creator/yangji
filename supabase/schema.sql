@@ -105,11 +105,42 @@ create trigger site_settings_touch_updated_at
   for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- 카카오 알림 수신자
+--
+-- 입금 확인을 누르면 여기 등록된 사람 전원에게 "나에게 보내기"로 알림이 간다.
+-- 토큰은 갱신될 때마다 값이 바뀌므로 환경변수가 아니라 이 표에 둔다.
+-- ---------------------------------------------------------------------------
+create table if not exists public.kakao_recipients (
+  id                uuid primary key default gen_random_uuid(),
+
+  -- 카카오 회원번호. 같은 사람이 다시 연결하면 행을 새로 만들지 않고 갱신한다.
+  kakao_user_id     text not null unique,
+  nickname          text not null default '',
+
+  refresh_token     text not null,
+  access_token      text not null default '',
+  access_expires_at timestamptz,
+
+  -- 마지막 실패 사유. 비어 있으면 정상으로 본다.
+  last_error        text not null default '',
+  last_sent_at      timestamptz,
+
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+drop trigger if exists kakao_recipients_touch_updated_at on public.kakao_recipients;
+create trigger kakao_recipients_touch_updated_at
+  before update on public.kakao_recipients
+  for each row execute function public.touch_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- RLS — 브라우저에서 오는 접근은 전부 막는다.
 --
 -- 정책을 하나도 만들지 않으므로 anon/authenticated 키로는 읽기·쓰기가 모두
 -- 거부된다. 서버(Server Action / Route Handler)에서 service_role 키로만
 -- 접근하며, 그 키는 RLS를 우회한다.
 -- ---------------------------------------------------------------------------
-alter table public.orders        enable row level security;
-alter table public.site_settings enable row level security;
+alter table public.orders           enable row level security;
+alter table public.site_settings    enable row level security;
+alter table public.kakao_recipients enable row level security;

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AdminHeader } from "@/app/admin/admin-header";
+import { KakaoSection } from "@/app/admin/kakao-section";
 import { SettingsForm } from "@/app/admin/settings-form";
+import { isKakaoConfigured, listRecipients } from "@/lib/kakao";
 import { getSiteSettings } from "@/lib/site-settings";
 import { requireAdmin } from "@/lib/supabase-auth";
 
@@ -11,16 +13,26 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminSettingsPage() {
+export default async function AdminSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kakao?: string }>;
+}) {
   await requireAdmin();
 
-  const settings = await getSiteSettings();
+  const configured = isKakaoConfigured();
+
+  const [{ kakao }, settings, recipients] = await Promise.all([
+    searchParams,
+    getSiteSettings(),
+    configured ? listRecipients() : Promise.resolve([]),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-10 sm:px-8">
       <AdminHeader current="/admin/settings" />
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-4">
         {settings ? (
           <SettingsForm settings={settings} />
         ) : (
@@ -28,6 +40,12 @@ export default async function AdminSettingsPage() {
             사이트 설정을 불러오지 못했습니다.
           </p>
         )}
+
+        <KakaoSection
+          recipients={recipients}
+          configured={configured}
+          result={kakao}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cancelOrder, confirmPayment, markShipped } from "@/app/admin/actions";
+import {
+  cancelOrder,
+  confirmPayment,
+  markAllShipped,
+  markShipped,
+} from "@/app/admin/actions";
 import { AdminHeader } from "@/app/admin/admin-header";
 import { ConfirmForm } from "@/app/admin/confirm-form";
 import { formatKst } from "@/lib/kst";
@@ -70,22 +75,40 @@ export default async function AdminPage({
         />
       </div>
 
-      <p className="mt-3 text-sm text-bark-400">
-        {shipping ? (
-          <>
-            부칠 주문 <strong className="text-bark-700">{paid.length}건</strong>{" "}
-            · <strong className="text-bark-700">{shipBoxes}박스</strong>
-          </>
-        ) : (
-          <>
-            확인할 주문{" "}
-            <strong className="text-bark-700">{pending.length}건</strong> · 합계{" "}
-            <strong className="text-bark-700">
-              {formatPrice(pendingTotal)}
-            </strong>
-          </>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-bark-400">
+          {shipping ? (
+            <>
+              부칠 주문{" "}
+              <strong className="text-bark-700">{paid.length}건</strong> ·{" "}
+              <strong className="text-bark-700">{shipBoxes}박스</strong>
+            </>
+          ) : (
+            <>
+              확인할 주문{" "}
+              <strong className="text-bark-700">{pending.length}건</strong> ·
+              합계{" "}
+              <strong className="text-bark-700">
+                {formatPrice(pendingTotal)}
+              </strong>
+            </>
+          )}
+        </p>
+
+        {shipping && paid.length > 0 && (
+          <ConfirmForm
+            action={markAllShipped}
+            message={`발송 대기 중인 ${paid.length}건을 모두 발송 완료로 바꿀까요?`}
+          >
+            <button
+              type="submit"
+              className="h-9 rounded-full px-4 text-xs font-semibold text-bark-600 ring-1 ring-cream-300 transition-colors hover:text-bark-900 hover:ring-bark-300"
+            >
+              전체 발송 완료 {paid.length}건
+            </button>
+          </ConfirmForm>
         )}
-      </p>
+      </div>
 
       <div className="mt-5 space-y-4">
         {shipping
