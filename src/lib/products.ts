@@ -142,7 +142,3 @@ export const FAQS = [
 export function formatPrice(value: number): string {
   return `${value.toLocaleString("ko-KR")}원`;
 }
-
-export function findBox(id: BoxId): BoxOption | undefined {
-  return BOX_OPTIONS.find((box) => box.id === id);
-}
