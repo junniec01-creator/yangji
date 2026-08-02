@@ -13,6 +13,72 @@ export async function signOut() {
   redirect("/admin/login");
 }
 
+function revalidateAdmin() {
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+}
+
+/**
+ * 지금 상태가 from일 때만 to로 바꾸고, 실제로 바뀌었는지를 돌려준다.
+ *
+ * 관리자가 여럿이라 같은 주문의 버튼을 동시에 누를 수 있다. 상태를 조건에
+ * 걸어 두면 두 번째 요청은 0건 업데이트로 끝나므로, 알림도 한 번만 나간다.
+ */
+async function transition(
+  id: string,
+  from: OrderStatus,
+  to: OrderStatus,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status: to })
+    .eq("id", id)
+    .eq("status", from)
+    .select("id");
+
+  if (error) {
+    console.error("주문 상태 변경 실패:", error.message);
+    return false;
+  }
+
+  return (data ?? []).length > 0;
+}
+
+/** 입금 대기 → 입금 확인 */
+export async function confirmPayment(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await transition(id, "pending", "paid");
+  revalidateAdmin();
+}
+
+/** 입금 대기 → 취소 */
+export async function cancelOrder(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await transition(id, "pending", "cancelled");
+  revalidateAdmin();
+}
+
+/** 입금 확인 → 발송 완료 */
+export async function markShipped(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await transition(id, "paid", "shipped");
+  revalidateAdmin();
+}
+
+/** 주문 관리 화면의 드롭다운. 어느 상태로든 옮길 수 있다. */
 export async function updateOrderStatus(formData: FormData) {
   await requireAdmin();
 
@@ -29,7 +95,7 @@ export async function updateOrderStatus(formData: FormData) {
 
   if (error) console.error("주문 상태 변경 실패:", error.message);
 
-  revalidatePath("/admin");
+  revalidateAdmin();
 }
 
 export async function deleteOrder(formData: FormData) {
@@ -43,7 +109,7 @@ export async function deleteOrder(formData: FormData) {
 
   if (error) console.error("주문 삭제 실패:", error.message);
 
-  revalidatePath("/admin");
+  revalidateAdmin();
 }
 
 export async function updateSettings(
@@ -75,7 +141,7 @@ export async function updateSettings(
     return { message: "설정을 저장하지 못했습니다.", ok: false };
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin/settings");
   revalidatePath("/order");
 
   return { message: "저장했습니다.", ok: true };

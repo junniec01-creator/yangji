@@ -4,8 +4,10 @@ import { BrandMark } from "@/components/brand-mark";
 import { SITE } from "@/lib/products";
 
 const TABS = [
-  { href: "/admin", label: "주문 목록" },
+  { href: "/admin", label: "주문 확인" },
+  { href: "/admin/orders", label: "주문 관리" },
   { href: "/admin/stats", label: "통계" },
+  { href: "/admin/settings", label: "설정" },
 ] as const;
 
 export function AdminHeader({ current }: { current: string }) {
@@ -36,15 +38,15 @@ export function AdminHeader({ current }: { current: string }) {
         </div>
       </header>
 
-      <nav className="mt-6 flex gap-1 border-b border-cream-200">
+      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-cream-200">
         {TABS.map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}
             className={
               tab.href === current
-                ? "-mb-px border-b-2 border-peach-500 px-4 py-2.5 text-sm font-semibold text-bark-900"
-                : "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm text-bark-400 transition-colors hover:text-bark-700"
+                ? "-mb-px border-b-2 border-peach-500 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-bark-900"
+                : "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm whitespace-nowrap text-bark-400 transition-colors hover:text-bark-700"
             }
           >
             {tab.label}
