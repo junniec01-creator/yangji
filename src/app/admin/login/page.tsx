@@ -13,13 +13,13 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-5 py-16">
       <div className="w-full max-w-sm">
-        <p className="text-sm font-semibold tracking-widest text-peach-600 uppercase">
+        <p className="text-xs font-semibold tracking-[0.18em] text-peach-600 uppercase">
           Admin
         </p>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-bark-900">
+        <h1 className="mt-3 font-display text-2xl font-bold text-bark-900">
           {SITE.farmName} 관리자
         </h1>
-        <p className="mt-2 text-sm text-bark-500">
+        <p className="mt-2.5 text-sm text-bark-400">
           주문 확인과 사이트 설정을 위한 화면입니다.
         </p>
         <LoginForm />

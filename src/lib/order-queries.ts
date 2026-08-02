@@ -49,19 +49,55 @@ export async function fetchOrders(status?: OrderStatus): Promise<OrderRow[]> {
   return (data ?? []) as OrderRow[];
 }
 
-/** 상태별 주문 건수. 필터 탭에 표시한다. */
-export async function countOrdersByStatus(): Promise<Record<string, number>> {
+export interface OrderSummary {
+  /** 상태별 주문 건수. 필터 탭에 표시한다. */
+  counts: Record<string, number>;
+  totalCount: number;
+  /** 취소를 뺀 박스 개수 합계 — 실제로 몇 박스를 따야 하는지. */
+  totalBoxes: number;
+  shippedCount: number;
+  shippedBoxes: number;
+  /** 취소를 뺀 금액 합계. */
+  revenue: number;
+}
+
+const EMPTY_SUMMARY: OrderSummary = {
+  counts: {},
+  totalCount: 0,
+  totalBoxes: 0,
+  shippedCount: 0,
+  shippedBoxes: 0,
+  revenue: 0,
+};
+
+/** 필터와 무관하게 전체 주문을 기준으로 낸 집계. */
+export async function fetchOrderSummary(): Promise<OrderSummary> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase.from("orders").select("status");
+  const { data, error } = await supabase
+    .from("orders")
+    .select("status, quantity, total_price");
 
   if (error) {
-    console.error("주문 건수 조회 실패:", error.message);
-    return {};
+    console.error("주문 집계 조회 실패:", error.message);
+    return EMPTY_SUMMARY;
   }
 
-  const counts: Record<string, number> = {};
+  const summary: OrderSummary = { ...EMPTY_SUMMARY, counts: {} };
+
   for (const row of data ?? []) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1;
+    summary.counts[row.status] = (summary.counts[row.status] ?? 0) + 1;
+    summary.totalCount += 1;
+
+    if (row.status === "cancelled") continue;
+
+    summary.totalBoxes += row.quantity;
+    summary.revenue += row.total_price;
+
+    if (row.status === "shipped") {
+      summary.shippedCount += 1;
+      summary.shippedBoxes += row.quantity;
+    }
   }
-  return counts;
+
+  return summary;
 }

@@ -1,45 +1,43 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 import { SITE } from "@/lib/products";
 
 const NAV_ITEMS = [
-  { href: "#peaches", label: "복숭아 소개" },
-  { href: "#boxes", label: "박스 규격" },
-  { href: "#guide", label: "주문·배송" },
-  { href: "#faq", label: "자주 묻는 질문" },
+  { href: "/#peaches", label: "복숭아 소개" },
+  { href: "/#boxes", label: "박스 규격" },
+  { href: "/#guide", label: "주문·배송" },
+  { href: "/#faq", label: "자주 묻는 질문" },
 ];
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-cream-200/80 bg-cream-50/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-cream-200/70 bg-cream-50/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-5 sm:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-bark-900 transition-opacity hover:opacity-70"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-70"
         >
-          <span
-            aria-hidden
-            className="h-7 w-7 rounded-full bg-gradient-to-br from-peach-300 to-peach-500"
-          />
-          <span className="font-serif text-lg font-semibold tracking-tight">
+          <BrandMark className="h-7 w-7" />
+          <span className="font-display text-lg font-bold text-bark-900">
             {SITE.farmName}
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-bark-600 lg:flex">
+        <nav className="hidden items-center gap-8 text-[0.9375rem] text-bark-500 lg:flex">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
-              className="transition-colors hover:text-peach-600"
+              className="transition-colors hover:text-bark-900"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
         <Link
           href="/order"
-          className="hidden rounded-full bg-peach-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-peach-500/25 transition-colors hover:bg-peach-600 sm:inline-flex"
+          className="hidden h-10 items-center rounded-full bg-bark-900 px-5 text-sm font-medium text-cream-50 transition-colors hover:bg-bark-800 sm:inline-flex"
         >
           주문하기
         </Link>

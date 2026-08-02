@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { submitOrder } from "@/app/order/actions";
 import { INITIAL_ORDER_FORM_STATE } from "@/app/order/form-state";
@@ -15,21 +15,27 @@ interface DaumPostcodeResult {
   userSelectedType: "R" | "J";
 }
 
+interface DaumPostcodeOptions {
+  oncomplete: (data: DaumPostcodeResult) => void;
+  onclose?: () => void;
+  width?: string;
+  height?: string;
+}
+
 declare global {
   interface Window {
     daum?: {
-      Postcode: new (options: {
-        oncomplete: (data: DaumPostcodeResult) => void;
-      }) => { open: () => void };
+      Postcode: new (options: DaumPostcodeOptions) => {
+        embed: (element: HTMLElement) => void;
+      };
     };
   }
 }
 
 const INPUT_BASE =
-  "w-full rounded-xl border bg-white px-4 py-3 text-bark-800 outline-none transition-colors placeholder:text-bark-400 focus:ring-2";
-const INPUT_NORMAL =
-  "border-cream-300 focus:border-peach-400 focus:ring-peach-200";
-const INPUT_ERROR = "border-red-400 focus:border-red-500 focus:ring-red-100";
+  "w-full rounded-xl bg-white px-4 py-3 text-bark-800 outline-none ring-1 transition-shadow placeholder:text-bark-300 focus:ring-2";
+const INPUT_NORMAL = "ring-cream-300 focus:ring-peach-400";
+const INPUT_ERROR = "ring-red-400 focus:ring-red-500";
 
 function inputClass(hasError: boolean) {
   return `${INPUT_BASE} ${hasError ? INPUT_ERROR : INPUT_NORMAL}`;
@@ -54,16 +60,14 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-2 flex items-center gap-1 text-sm font-semibold text-bark-800"
+        className="mb-2.5 flex items-center gap-1 text-sm font-semibold text-bark-800"
       >
         {label}
         {required && <span className="text-peach-500">*</span>}
       </label>
       {children}
-      {hint && !error && (
-        <p className="mt-1.5 text-xs text-bark-400">{hint}</p>
-      )}
-      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+      {hint && !error && <p className="mt-2 text-xs text-bark-400">{hint}</p>}
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
@@ -73,21 +77,21 @@ function SectionCard({
   title,
   children,
 }: {
-  step: string;
+  step: number;
   title: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-cream-200 bg-white p-6 sm:p-8">
+    <section className="rounded-3xl bg-white p-6 ring-1 ring-cream-200 sm:p-8">
       <div className="flex items-center gap-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-peach-100 text-xs font-semibold text-peach-700">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-peach-100 text-xs font-semibold text-peach-700 tabular-nums">
           {step}
         </span>
-        <h2 className="font-serif text-xl font-semibold text-bark-900">
+        <h2 className="font-display text-lg font-bold text-bark-900">
           {title}
         </h2>
       </div>
-      <div className="mt-6 space-y-5">{children}</div>
+      <div className="mt-7 space-y-6">{children}</div>
     </section>
   );
 }
@@ -105,6 +109,8 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
   const [address1, setAddress1] = useState("");
   const [depositorTouched, setDepositorTouched] = useState(false);
   const [postcodeReady, setPostcodeReady] = useState(false);
+  const [postcodeOpen, setPostcodeOpen] = useState(false);
+  const postcodeBoxRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     ordererName: "",
     ordererPhone: "",
@@ -130,17 +136,34 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
   const selectedBox = BOX_OPTIONS.find((box) => box.id === boxId);
   const errors = state.fieldErrors;
 
-  function openPostcodeSearch() {
-    if (!window.daum) return;
+  // 주소 검색은 팝업 창 대신 화면 안 레이어로 띄운다.
+  // 모바일에서 팝업이 화면 밖으로 밀려나는 문제를 피하기 위해서다.
+  useEffect(() => {
+    if (!postcodeOpen) return;
+
+    const container = postcodeBoxRef.current;
+    if (!window.daum || !container) return;
+
+    container.replaceChildren();
     new window.daum.Postcode({
+      width: "100%",
+      height: "100%",
       oncomplete: (data) => {
         setPostcode(data.zonecode);
         setAddress1(
           data.userSelectedType === "R" ? data.roadAddress : data.jibunAddress,
         );
+        setPostcodeOpen(false);
       },
-    }).open();
-  }
+      onclose: () => setPostcodeOpen(false),
+    }).embed(container);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [postcodeOpen]);
 
   return (
     <>
@@ -152,19 +175,19 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
 
       <form
         action={formAction}
-        className="grid gap-6 lg:grid-cols-[1fr_21rem] lg:items-start"
+        className="grid gap-5 lg:grid-cols-[1fr_20rem] lg:items-start lg:gap-6"
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           {state.message && (
             <p
               role="alert"
-              className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700"
+              className="rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700 ring-1 ring-red-200"
             >
               {state.message}
             </p>
           )}
 
-          <SectionCard step="1" title="주문자 정보">
+          <SectionCard step={1} title="주문자 정보">
             <Field
               label="성함"
               htmlFor="ordererName"
@@ -202,52 +225,53 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
             </Field>
           </SectionCard>
 
-          <SectionCard step="2" title="상품 선택">
-            <input type="hidden" name="boxId" value={boxId} />
+          <SectionCard step={2} title="상품 선택">
             <fieldset>
-              <legend className="mb-2 text-sm font-semibold text-bark-800">
+              <legend className="mb-2.5 text-sm font-semibold text-bark-800">
                 박스 크기 <span className="text-peach-500">*</span>
               </legend>
               <div className="grid gap-3 sm:grid-cols-3">
-                {BOX_OPTIONS.map((box) => {
-                  const selected = box.id === boxId;
-                  return (
-                    <button
-                      key={box.id}
-                      type="button"
-                      onClick={() => setBoxId(box.id)}
-                      aria-pressed={selected}
-                      className={
-                        selected
-                          ? "rounded-2xl border-2 border-peach-400 bg-peach-50 p-4 text-left"
-                          : "rounded-2xl border border-cream-300 bg-white p-4 text-left transition-colors hover:border-peach-300"
-                      }
-                    >
+                {BOX_OPTIONS.map((box) => (
+                  <label key={box.id} className="block cursor-pointer">
+                    <input
+                      type="radio"
+                      name="boxId"
+                      value={box.id}
+                      checked={box.id === boxId}
+                      onChange={() => setBoxId(box.id)}
+                      className="peer sr-only"
+                    />
+                    <span className="block rounded-2xl bg-white p-4 ring-1 ring-cream-300 transition-shadow peer-checked:bg-peach-50 peer-checked:ring-2 peer-checked:ring-peach-400 peer-focus-visible:ring-2 peer-focus-visible:ring-peach-400">
                       <span className="block text-sm font-semibold text-bark-900">
                         {box.name}
                       </span>
-                      <span className="mt-1 block text-xs text-bark-500">
+                      <span className="mt-1 block text-xs text-bark-400 tabular-nums">
                         {box.weightLabel} · {box.countLabel}
                       </span>
-                      <span className="mt-3 block font-serif text-lg font-semibold text-bark-900">
+                      <span className="mt-3 block text-lg font-semibold text-bark-900 tabular-nums">
                         {formatPrice(box.price)}
                       </span>
-                    </button>
-                  );
-                })}
+                    </span>
+                  </label>
+                ))}
               </div>
               {errors.boxId && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.boxId}</p>
+                <p className="mt-2 text-xs text-red-600">{errors.boxId}</p>
               )}
             </fieldset>
 
-            <Field label="수량" htmlFor="quantity" required error={errors.quantity}>
+            <Field
+              label="수량"
+              htmlFor="quantity"
+              required
+              error={errors.quantity}
+            >
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setQuantity((n) => Math.max(1, n - 1))}
                   aria-label="수량 줄이기"
-                  className="h-12 w-12 shrink-0 rounded-xl border border-cream-300 bg-white text-xl text-bark-600 transition-colors hover:border-peach-300 hover:text-peach-600"
+                  className="h-12 w-12 shrink-0 rounded-xl bg-white text-xl text-bark-500 ring-1 ring-cream-300 transition-colors hover:text-peach-600"
                 >
                   −
                 </button>
@@ -264,7 +288,7 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
                     );
                   }}
                   inputMode="numeric"
-                  className={`${inputClass(Boolean(errors.quantity))} text-center`}
+                  className={`${inputClass(Boolean(errors.quantity))} text-center tabular-nums`}
                 />
                 <button
                   type="button"
@@ -272,7 +296,7 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
                     setQuantity((n) => Math.min(MAX_QUANTITY, n + 1))
                   }
                   aria-label="수량 늘리기"
-                  className="h-12 w-12 shrink-0 rounded-xl border border-cream-300 bg-white text-xl text-bark-600 transition-colors hover:border-peach-300 hover:text-peach-600"
+                  className="h-12 w-12 shrink-0 rounded-xl bg-white text-xl text-bark-500 ring-1 ring-cream-300 transition-colors hover:text-peach-600"
                 >
                   +
                 </button>
@@ -280,8 +304,8 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
             </Field>
           </SectionCard>
 
-          <SectionCard step="3" title="받으실 분 · 배송지">
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-cream-100 px-4 py-3">
+          <SectionCard step={3} title="받으실 분 · 배송지">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-cream-100 px-4 py-3.5">
               <input
                 type="checkbox"
                 name="recipientSame"
@@ -343,22 +367,22 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
                   value={postcode}
                   readOnly
                   placeholder="우편번호"
-                  className={`${inputClass(Boolean(errors.postcode))} w-32 shrink-0 cursor-default bg-cream-50`}
+                  className={`${inputClass(Boolean(errors.postcode))} w-32 shrink-0 cursor-default bg-cream-50 tabular-nums`}
                 />
                 <button
                   type="button"
-                  onClick={openPostcodeSearch}
+                  onClick={() => setPostcodeOpen(true)}
                   disabled={!postcodeReady}
-                  className="shrink-0 rounded-xl bg-bark-800 px-5 text-sm font-semibold text-white transition-colors hover:bg-bark-900 disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-bark-900 px-5 text-sm font-medium text-white transition-colors hover:bg-bark-800 disabled:opacity-40"
                 >
-                  우편번호 찾기
+                  주소 찾기
                 </button>
               </div>
               <input
                 name="address1"
                 value={address1}
                 readOnly
-                placeholder="주소를 검색해 주세요"
+                placeholder="주소 찾기를 눌러 주세요"
                 className={`${inputClass(Boolean(errors.address1))} mt-3 cursor-default bg-cream-50`}
               />
               <input
@@ -371,14 +395,14 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
             </Field>
 
             {isRemote && (
-              <p className="rounded-xl border border-peach-200 bg-peach-50 px-4 py-3 text-sm text-peach-700">
+              <p className="rounded-xl bg-peach-50 px-4 py-3 text-sm text-peach-700 ring-1 ring-peach-200 break-keep">
                 {SHIPPING.remoteLabel} 지역이라 택배사 추가 요금{" "}
                 {formatPrice(SHIPPING.remoteSurcharge)}이 더해집니다.
               </p>
             )}
           </SectionCard>
 
-          <SectionCard step="4" title="입금 · 요청사항">
+          <SectionCard step={4} title="입금 · 요청사항">
             <Field
               label="입금자명"
               htmlFor="depositorName"
@@ -419,22 +443,24 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
           </SectionCard>
         </div>
 
-        <aside className="lg:sticky lg:top-24">
-          <div className="rounded-3xl border border-cream-200 bg-white p-6">
-            <h2 className="font-serif text-lg font-semibold text-bark-900">
+        <aside className="lg:sticky lg:top-20">
+          <div className="rounded-3xl bg-white p-6 ring-1 ring-cream-200">
+            <h2 className="font-display text-base font-bold text-bark-900">
               결제 금액
             </h2>
 
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-bark-500">
+                <dt className="text-bark-400">
                   {selectedBox?.name} × {quantity}
                 </dt>
-                <dd className="text-bark-800">{formatPrice(price.itemTotal)}</dd>
+                <dd className="text-bark-800 tabular-nums">
+                  {formatPrice(price.itemTotal)}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-bark-500">배송비</dt>
-                <dd className="text-bark-800">
+                <dt className="text-bark-400">배송비</dt>
+                <dd className="text-bark-800 tabular-nums">
                   {price.shippingFee === 0
                     ? "무료"
                     : formatPrice(price.shippingFee)}
@@ -444,7 +470,7 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
 
             <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-cream-200 pt-5">
               <span className="text-sm font-semibold text-bark-800">합계</span>
-              <span className="font-serif text-3xl font-semibold text-bark-900">
+              <span className="text-3xl font-semibold text-bark-900 tabular-nums">
                 {formatPrice(price.total)}
               </span>
             </div>
@@ -452,18 +478,36 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
             <button
               type="submit"
               disabled={pending}
-              className="mt-6 flex h-14 w-full items-center justify-center rounded-full bg-peach-500 text-base font-semibold text-white shadow-lg shadow-peach-500/25 transition-colors hover:bg-peach-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 flex h-14 w-full items-center justify-center rounded-full bg-peach-500 text-[0.9375rem] font-semibold text-white shadow-[0_10px_30px_-10px] shadow-peach-500/60 transition-colors hover:bg-peach-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? "접수 중..." : "주문 접수하기"}
             </button>
 
-            <p className="mt-4 text-xs leading-relaxed text-bark-400">
+            <p className="mt-4 text-xs leading-relaxed text-bark-400 break-keep">
               접수 후 안내되는 계좌로 입금해 주시면 확인 뒤 발송됩니다. 카드
               결제는 아직 지원하지 않습니다.
             </p>
           </div>
         </aside>
       </form>
+
+      {postcodeOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-bark-900/50 p-0 sm:items-center sm:p-6">
+          <div className="flex h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white sm:h-[32rem] sm:rounded-3xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-cream-200 px-5 py-3.5">
+              <h2 className="text-sm font-semibold text-bark-900">주소 찾기</h2>
+              <button
+                type="button"
+                onClick={() => setPostcodeOpen(false)}
+                className="rounded-lg px-3 py-1.5 text-sm text-bark-500 transition-colors hover:bg-cream-100"
+              >
+                닫기
+              </button>
+            </div>
+            <div ref={postcodeBoxRef} className="min-h-0 flex-1" />
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -15,13 +15,13 @@ export const dynamic = "force-dynamic";
 function Notice({ title, body }: { title: string; body: string }) {
   return (
     <div className="mx-auto max-w-md px-5 py-24 text-center">
-      <h1 className="font-serif text-3xl leading-snug font-semibold text-bark-900">
+      <h1 className="font-display text-3xl leading-snug font-bold text-bark-900">
         {title}
       </h1>
-      <p className="mt-4 leading-relaxed text-bark-600">{body}</p>
+      <p className="mt-5 leading-[1.85] text-bark-500 break-keep">{body}</p>
       <Link
         href="/"
-        className="mt-8 inline-flex h-12 items-center justify-center rounded-full border border-cream-300 px-8 text-sm font-semibold text-bark-700 transition-colors hover:border-peach-300 hover:text-peach-700"
+        className="mt-9 inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-semibold text-bark-700 ring-1 ring-cream-300 transition-colors hover:text-peach-700"
       >
         홈으로 돌아가기
       </Link>
@@ -55,13 +55,13 @@ export default async function OrderPage({
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
       <header className="mb-10">
-        <p className="text-sm font-semibold tracking-widest text-peach-600 uppercase">
+        <p className="text-xs font-semibold tracking-[0.18em] text-peach-600 uppercase">
           Order
         </p>
-        <h1 className="mt-3 font-serif text-3xl leading-snug font-semibold text-bark-900 sm:text-4xl">
+        <h1 className="mt-4 font-display text-[clamp(1.75rem,4.5vw,2.5rem)] leading-[1.25] font-bold text-bark-900">
           주문서 작성
         </h1>
-        <p className="mt-4 leading-relaxed text-bark-600">
+        <p className="mt-5 max-w-xl leading-[1.85] text-bark-500 break-keep">
           {SEASON.periodLabel} 사이 수확되는 대로 순서대로 보내드립니다. 접수
           후 안내되는 계좌로 입금해 주시면 확인 뒤 발송됩니다.
         </p>

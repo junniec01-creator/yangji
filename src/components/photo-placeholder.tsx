@@ -11,13 +11,19 @@ export function PhotoPlaceholder({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-cream-300 bg-cream-100 text-center ${className}`}
+      className={`relative flex flex-col items-center justify-center gap-3 overflow-hidden bg-cream-100 text-center ${className}`}
     >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,var(--color-peach-100),transparent_60%)]"
+      />
       <span
         aria-hidden
-        className="h-10 w-10 rounded-full bg-peach-200 ring-4 ring-peach-100"
+        className="relative h-12 w-12 rounded-full bg-white/70 ring-1 ring-cream-300"
       />
-      <span className="px-6 text-xs leading-relaxed text-bark-400">{label}</span>
+      <span className="relative max-w-[16rem] px-6 text-xs leading-relaxed text-bark-400">
+        {label}
+      </span>
     </div>
   );
 }

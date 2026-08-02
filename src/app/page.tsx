@@ -21,6 +21,8 @@ export default function Home() {
         <ClosingCta />
       </main>
       <SiteFooter />
+      {/* 모바일 하단 고정 버튼에 푸터가 가리지 않도록 띄운다 */}
+      <div aria-hidden className="h-20 sm:hidden" />
       <MobileOrderBar />
     </>
   );

@@ -5,7 +5,7 @@ import { INITIAL_ADMIN_FORM_STATE } from "@/app/admin/form-state";
 import { signIn } from "@/app/admin/login/actions";
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-cream-300 bg-white px-4 py-3 text-bark-800 outline-none transition-colors placeholder:text-bark-400 focus:border-peach-400 focus:ring-2 focus:ring-peach-200";
+  "w-full rounded-xl bg-white px-4 py-3 text-bark-800 ring-1 outline-none ring-cream-300 transition-shadow focus:ring-2 focus:ring-peach-400";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(
@@ -61,7 +61,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="flex h-13 w-full items-center justify-center rounded-full bg-bark-800 text-sm font-semibold text-white transition-colors hover:bg-bark-900 disabled:opacity-60"
+        className="flex h-13 w-full items-center justify-center rounded-full bg-bark-900 text-sm font-semibold text-cream-50 transition-colors hover:bg-bark-800 disabled:opacity-60"
       >
         {pending ? "확인 중..." : "로그인"}
       </button>

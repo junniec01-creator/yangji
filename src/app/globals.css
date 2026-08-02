@@ -1,44 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-noto-serif-kr), ui-serif, Georgia, serif;
+  --font-sans: var(--font-plex-kr), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-gowun), ui-serif, Georgia, serif;
 
-  /* 배경 · 종이 결 */
-  --color-cream-50: #fffcf8;
-  --color-cream-100: #fdf5ec;
-  --color-cream-200: #f7e8d8;
-  --color-cream-300: #eed9c4;
+  /* 종이 — 배경과 경계선 */
+  --color-cream-50: #fdfbf8;
+  --color-cream-100: #f7f1ea;
+  --color-cream-200: #efe6db;
+  --color-cream-300: #e2d5c6;
 
-  /* 복숭아 과육 */
-  --color-peach-50: #fff5f1;
-  --color-peach-100: #ffe7de;
-  --color-peach-200: #ffcdbc;
-  --color-peach-300: #ffab92;
-  --color-peach-400: #fb8768;
-  --color-peach-500: #ef6a4b;
-  --color-peach-600: #d95033;
-  --color-peach-700: #b23e28;
+  /* 복숭아 — 주요 강조색 */
+  --color-peach-50: #fff4f0;
+  --color-peach-100: #ffe3d9;
+  --color-peach-200: #ffc6b3;
+  --color-peach-300: #fca287;
+  --color-peach-400: #f57e5d;
+  --color-peach-500: #e9613f;
+  --color-peach-600: #cf4a2c;
+  --color-peach-700: #a83a22;
 
-  /* 나뭇가지 — 본문 텍스트 */
-  --color-bark-400: #a8887a;
-  --color-bark-500: #8a6a5c;
-  --color-bark-600: #6b4f43;
-  --color-bark-700: #513a31;
-  --color-bark-800: #3a2822;
-  --color-bark-900: #271a16;
+  /* 나뭇가지 — 글자색 */
+  --color-bark-300: #b9a89d;
+  --color-bark-400: #97857a;
+  --color-bark-500: #7a6a61;
+  --color-bark-600: #5c4e46;
+  --color-bark-700: #423731;
+  --color-bark-800: #2a211c;
+  --color-bark-900: #1a1310;
 
-  /* 잎 — 보조 포인트 */
-  --color-leaf-500: #6f8b5b;
-  --color-leaf-600: #57703f;
+  /* 잎 — 드물게 쓰는 보조색 */
+  --color-leaf-500: #6b8f5e;
+  --color-leaf-600: #52734a;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--color-cream-50);
   color: var(--color-bark-800);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 폼 요소가 시스템 다크 모드를 따라가지 않도록 고정 */
 :root {
   color-scheme: light;
+}
+
+/* 제목은 자간을 좁혀야 한글에서도 단단해 보인다 */
+.font-display {
+  letter-spacing: -0.02em;
+  word-break: keep-all;
 }

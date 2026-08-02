@@ -21,20 +21,20 @@ export function toCsv(headers: string[], rows: unknown[][]): string {
   return UTF8_BOM + lines.join("\r\n") + "\r\n";
 }
 
-/** 2026-08-03 00:10 (한국 시간) */
+/**
+ * 2026-08-03 00:10 (한국 시간).
+ * Intl은 실행 환경의 로케일 데이터에 따라 결과가 달라질 수 있어 쓰지 않고,
+ * UTC에 9시간을 더해 직접 조립한다.
+ */
 export function formatKst(iso: string): string {
-  const parts = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date(iso));
+  const utc = new Date(iso);
+  if (Number.isNaN(utc.getTime())) return "";
 
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "";
+  const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
 
-  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+  return (
+    `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}` +
+    ` ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`
+  );
 }

@@ -6,7 +6,7 @@ import { INITIAL_ADMIN_FORM_STATE } from "@/app/admin/form-state";
 import type { SiteSettings } from "@/lib/site-settings";
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-cream-300 bg-white px-4 py-2.5 text-sm text-bark-800 outline-none transition-colors placeholder:text-bark-400 focus:border-peach-400 focus:ring-2 focus:ring-peach-200";
+  "w-full rounded-xl bg-white px-4 py-2.5 text-sm text-bark-800 ring-1 outline-none ring-cream-300 transition-shadow placeholder:text-bark-300 focus:ring-2 focus:ring-peach-400";
 
 export function SettingsForm({ settings }: { settings: SiteSettings }) {
   const [state, formAction, pending] = useActionState(
@@ -18,10 +18,10 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
   return (
     <form
       action={formAction}
-      className="rounded-3xl border border-cream-200 bg-white p-6 sm:p-7"
+      className="rounded-3xl bg-white p-6 ring-1 ring-cream-200 sm:p-7"
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="font-serif text-xl font-semibold text-bark-900">
+        <h2 className="font-display text-lg font-bold text-bark-900">
           사이트 설정
         </h2>
         {state.message && (
@@ -125,7 +125,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-bark-800 px-7 text-sm font-semibold text-white transition-colors hover:bg-bark-900 disabled:opacity-60"
+        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-bark-900 px-7 text-sm font-semibold text-cream-50 transition-colors hover:bg-bark-800 disabled:opacity-60"
       >
         {pending ? "저장 중..." : "설정 저장"}
       </button>

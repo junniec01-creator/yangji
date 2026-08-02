@@ -4,29 +4,24 @@ import { BOX_OPTIONS, SEASON, SITE, formatPrice } from "@/lib/products";
 
 const lowestPrice = Math.min(...BOX_OPTIONS.map((box) => box.price));
 
-const HIGHLIGHTS = [
-  { title: "수확 당일 발송", body: "새벽에 따서 그날 보냅니다." },
-  { title: "산지 직송", body: "중간 유통 없이 농장에서 바로." },
-  { title: "무료 배송", body: `${formatPrice(lowestPrice)}부터, 배송비 없음.` },
+const FACTS = [
+  { value: "당일", label: "새벽 수확 후 그날 발송" },
+  { value: "12~15", label: "수확 기준 당도 (Brix)" },
+  { value: "무료", label: `배송비 · ${formatPrice(lowestPrice)}부터` },
 ];
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
-      {/* 배경 광원 */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 -right-32 h-[28rem] w-[28rem] rounded-full bg-peach-200/45 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-40 -left-40 h-96 w-96 rounded-full bg-cream-200/70 blur-3xl"
+        className="pointer-events-none absolute inset-x-0 -top-64 h-[40rem] bg-[radial-gradient(60%_60%_at_70%_45%,var(--color-peach-100),transparent_70%)]"
       />
 
-      <div className="relative mx-auto max-w-6xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div className="relative mx-auto max-w-6xl px-5 pt-12 pb-16 sm:px-8 sm:pt-20 sm:pb-24">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.02fr_1fr] lg:gap-20">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-peach-200 bg-peach-50 px-4 py-1.5 text-xs font-medium text-peach-700">
+            <span className="inline-flex items-center gap-2 rounded-full border border-cream-300 bg-white/70 px-3.5 py-1.5 text-xs font-medium text-bark-600">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full bg-peach-500"
@@ -34,40 +29,40 @@ export function HeroSection() {
               {SEASON.label} · {SEASON.periodLabel}
             </span>
 
-            <h1 className="mt-6 font-serif text-[2.6rem] leading-[1.2] font-semibold tracking-tight text-balance text-bark-900 sm:text-6xl sm:leading-[1.15]">
+            <h1 className="mt-7 font-display text-[clamp(2.5rem,8vw,4.25rem)] leading-[1.14] font-bold text-bark-900">
               나무에서 익힌
               <br />
               복숭아를 보냅니다
             </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-bark-600 sm:text-lg">
-              덜 익은 걸 미리 따 두지 않습니다. {SITE.farmName}은 발송일 새벽에
-              수확해 한 상자씩 손으로 골라 담습니다.
+            <p className="mt-7 max-w-md text-[1.0625rem] leading-[1.85] text-bark-500 break-keep">
+              덜 익은 것을 미리 따 두지 않습니다. {SITE.farmName}은 발송일
+              새벽에 수확해, 한 상자씩 손으로 골라 담습니다.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 href="/order"
-                className="inline-flex h-13 items-center justify-center rounded-full bg-peach-500 px-8 text-base font-semibold text-white shadow-lg shadow-peach-500/25 transition-colors hover:bg-peach-600"
+                className="inline-flex h-14 items-center justify-center rounded-full bg-peach-500 px-9 text-[0.9375rem] font-semibold text-white shadow-[0_10px_30px_-10px] shadow-peach-500/60 transition-colors hover:bg-peach-600"
               >
                 복숭아 주문하기
               </Link>
-              <a
-                href="#boxes"
-                className="inline-flex h-13 items-center justify-center rounded-full border border-cream-300 bg-white/70 px-8 text-base font-medium text-bark-700 transition-colors hover:border-peach-300 hover:text-peach-700"
+              <Link
+                href="/#boxes"
+                className="inline-flex h-14 items-center justify-center rounded-full px-7 text-[0.9375rem] font-medium text-bark-600 transition-colors hover:text-bark-900"
               >
-                박스 규격 보기
-              </a>
+                박스 규격 보기 →
+              </Link>
             </div>
 
-            <dl className="mt-12 grid grid-cols-1 gap-x-6 gap-y-5 border-t border-cream-200 pt-8 sm:grid-cols-3">
-              {HIGHLIGHTS.map((item) => (
-                <div key={item.title}>
-                  <dt className="text-sm font-semibold text-bark-800">
-                    {item.title}
+            <dl className="mt-14 grid grid-cols-3 gap-4 border-t border-cream-200 pt-8">
+              {FACTS.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="font-display text-2xl font-bold text-bark-900 tabular-nums sm:text-[1.75rem]">
+                    {fact.value}
                   </dt>
-                  <dd className="mt-1 text-sm leading-relaxed text-bark-500">
-                    {item.body}
+                  <dd className="mt-1.5 text-xs leading-relaxed text-bark-400 break-keep">
+                    {fact.label}
                   </dd>
                 </div>
               ))}
@@ -77,17 +72,13 @@ export function HeroSection() {
           <div className="relative">
             <PhotoPlaceholder
               label="대표 사진 — 수확한 복숭아를 담은 박스 (세로 4:5 권장)"
-              className="aspect-4/5 w-full shadow-sm"
+              className="aspect-4/5 w-full rounded-[2rem] ring-1 ring-cream-200"
             />
-            <div className="absolute -bottom-6 -left-4 hidden w-52 rounded-2xl border border-cream-200 bg-white/95 p-4 shadow-xl shadow-bark-900/5 backdrop-blur sm:block">
-              <p className="font-serif text-2xl font-semibold text-bark-900">
-                12~15
-                <span className="ml-1 text-sm font-sans font-medium text-bark-500">
-                  Brix
-                </span>
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-bark-500">
-                수확 전 당도를 재고 기준에 못 미치면 며칠 더 둡니다.
+            <div className="absolute -bottom-5 -left-3 hidden max-w-[15rem] rounded-2xl bg-white/95 p-5 ring-1 shadow-2xl ring-cream-200 shadow-bark-900/8 backdrop-blur sm:block">
+              <p className="text-xs font-medium text-peach-600">수확 기준</p>
+              <p className="mt-2 text-[0.8125rem] leading-relaxed text-bark-600 break-keep">
+                당도를 재서 기준에 못 미치면 며칠 더 두었다가 땁니다. 날짜에
+                맞춰 미리 따지 않습니다.
               </p>
             </div>
           </div>
