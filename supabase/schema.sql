@@ -71,8 +71,14 @@ create table if not exists public.orders (
   updated_at      timestamptz not null default now()
 );
 
+-- 수익을 나눠 갖는 판매자. 명단은 src/lib/products.ts의 SELLERS에 있다.
+-- 빈 문자열은 이 기능이 생기기 전에 들어온 주문(= 미지정)을 뜻한다.
+alter table public.orders
+  add column if not exists seller_id text not null default '';
+
 create index if not exists orders_created_at_idx on public.orders (created_at desc);
 create index if not exists orders_status_idx     on public.orders (status);
+create index if not exists orders_seller_id_idx  on public.orders (seller_id);
 
 drop trigger if exists orders_touch_updated_at on public.orders;
 create trigger orders_touch_updated_at

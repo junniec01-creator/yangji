@@ -13,10 +13,11 @@ import {
   ORDER_STATUSES,
   UNSHIPPED,
   parseOrderFilter,
+  parseSellerId,
   type OrderFilter,
   type OrderStatus,
 } from "@/lib/orders";
-import { BOX_OPTIONS, formatPrice } from "@/lib/products";
+import { BOX_OPTIONS, SELLERS, formatPrice, sellerName } from "@/lib/products";
 import { requireAdmin } from "@/lib/supabase-auth";
 
 export const metadata: Metadata = {
@@ -36,20 +37,36 @@ const STATUS_BADGE: Record<OrderStatus, string> = {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; seller?: string }>;
 }) {
   await requireAdmin();
 
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, seller: sellerParam } = await searchParams;
   const filter = parseOrderFilter(statusParam);
+  const seller = parseSellerId(sellerParam);
 
   const [orders, summary] = await Promise.all([
-    fetchOrders(filter),
+    fetchOrders(filter, seller),
     fetchOrderSummary(),
   ]);
 
   const filterCount = (value: OrderFilter) =>
     value === UNSHIPPED ? summary.unshippedCount : (summary.counts[value] ?? 0);
+
+  // 상태와 판매자는 겹쳐 쓸 수 있으므로, 한쪽을 바꿔도 나머지는 유지한다.
+  const href = (base: string, status?: string, who?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (who) params.set("seller", who);
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
+  };
+
+  const statusHref = (value?: OrderFilter) =>
+    href("/admin/orders", value, seller);
+  const sellerHref = (value?: string) => href("/admin/orders", filter, value);
+  const csvHref = (value?: OrderFilter) =>
+    href("/api/admin/orders/export", value, seller);
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
@@ -84,9 +101,28 @@ export default async function AdminOrdersPage({
         />
       </div>
 
-      <nav className="mt-8 flex flex-wrap gap-2">
+      <div className="mt-8 flex flex-wrap items-center gap-2 rounded-2xl bg-peach-50 px-4 py-3 ring-1 ring-peach-200">
+        <span className="mr-1 text-xs font-semibold text-peach-700">판매자</span>
         <FilterTab
-          href="/admin/orders"
+          href={sellerHref()}
+          label="전체"
+          count={summary.totalCount}
+          active={!seller}
+        />
+        {SELLERS.map((option) => (
+          <FilterTab
+            key={option.id}
+            href={sellerHref(option.id)}
+            label={option.name}
+            count={summary.sellerCounts[option.id] ?? 0}
+            active={seller === option.id}
+          />
+        ))}
+      </div>
+
+      <nav className="mt-4 flex flex-wrap gap-2">
+        <FilterTab
+          href={statusHref()}
           label="전체"
           count={summary.totalCount}
           active={!filter}
@@ -94,7 +130,7 @@ export default async function AdminOrdersPage({
         {ORDER_FILTERS.map((value) => (
           <FilterTab
             key={value}
-            href={`/admin/orders?status=${value}`}
+            href={statusHref(value)}
             label={ORDER_FILTER_LABEL[value]}
             count={filterCount(value)}
             active={filter === value}
@@ -105,18 +141,16 @@ export default async function AdminOrdersPage({
       <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-cream-100/70 px-4 py-3 ring-1 ring-cream-200">
         <span className="mr-1 text-xs font-semibold text-bark-500">
           CSV 내려받기
+          {seller && (
+            <span className="ml-1 text-peach-700">· {sellerName(seller)}</span>
+          )}
         </span>
-        <CsvLink
-          href="/api/admin/orders/export"
-          label="전체"
-          count={summary.totalCount}
-        />
+        <CsvLink href={csvHref()} label="전체" />
         {ORDER_FILTERS.map((value) => (
           <CsvLink
             key={value}
-            href={`/api/admin/orders/export?status=${value}`}
+            href={csvHref(value)}
             label={ORDER_FILTER_LABEL[value]}
-            count={filterCount(value)}
           />
         ))}
       </div>
@@ -137,6 +171,9 @@ export default async function AdminOrdersPage({
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="text-base font-semibold text-bark-900 tabular-nums">
                   {order.order_no}
+                </span>
+                <span className="rounded-full bg-peach-500 px-2.5 py-1 text-xs font-semibold text-white">
+                  {sellerName(order.seller_id)}
                 </span>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[order.status]}`}
@@ -254,22 +291,17 @@ function FilterTab({
   );
 }
 
-function CsvLink({
-  href,
-  label,
-  count,
-}: {
-  href: string;
-  label: string;
-  count: number;
-}) {
+/**
+ * 건수는 붙이지 않는다. 판매자 필터가 걸리면 전체 기준 집계와 달라져서
+ * 오히려 잘못 읽히기 때문이다.
+ */
+function CsvLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-bark-600 ring-1 ring-cream-300 transition-colors hover:text-peach-700 hover:ring-peach-300"
+      className="inline-flex items-center rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-bark-600 ring-1 ring-cream-300 transition-colors hover:text-peach-700 hover:ring-peach-300"
     >
       {label}
-      <span className="text-bark-300 tabular-nums">{count}</span>
     </a>
   );
 }

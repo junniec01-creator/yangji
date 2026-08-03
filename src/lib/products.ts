@@ -16,6 +16,29 @@ export const SITE = {
   address: "충청북도 영동군 영동읍 계산리 123-4",
 } as const;
 
+export type SellerId = "keum" | "park";
+
+export interface Seller {
+  id: SellerId;
+  name: string;
+}
+
+/**
+ * 수익을 나눠 갖는 판매자.
+ *
+ * 주문에는 이름이 아니라 id를 저장한다. 표기가 바뀌어도 지난 주문이
+ * 깨지지 않게 하기 위해서다. 사람이 바뀌면 이 배열만 고치면 된다.
+ */
+export const SELLERS: readonly Seller[] = [
+  { id: "keum", name: "김금춘" },
+  { id: "park", name: "박태준" },
+] as const;
+
+/** 저장된 id를 이름으로. 빈 값이거나 명단에 없으면 "미지정". */
+export function sellerName(id: string): string {
+  return SELLERS.find((seller) => seller.id === id)?.name ?? "미지정";
+}
+
 export const SEASON = {
   label: "2026 여름 수확",
   periodLabel: "7월 중순 ~ 8월 말",

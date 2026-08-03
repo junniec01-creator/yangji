@@ -1,5 +1,6 @@
 import "server-only";
 import { DAY_MS, dayKey, kstDayStart } from "@/lib/kst";
+import type { SellerId } from "@/lib/products";
 import { createServiceClient } from "@/lib/supabase";
 
 export interface DailyStat {
@@ -36,13 +37,21 @@ export function parseStatsRange(value: string | null | undefined): StatsRange {
 /**
  * 주문이 없는 날도 0으로 채운 일별 집계. 취소는 빼고 센다.
  * days가 0이면 첫 주문일부터 오늘까지 전부 돌려준다.
+ * seller를 주면 그 판매자 몫만 센다.
  */
-export async function fetchDailyStats(days: StatsRange): Promise<DailyStat[]> {
+export async function fetchDailyStats(
+  days: StatsRange,
+  seller?: SellerId,
+): Promise<DailyStat[]> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select("quantity, total_price, created_at")
     .neq("status", "cancelled");
+
+  if (seller) query = query.eq("seller_id", seller);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("일별 집계 조회 실패:", error.message);

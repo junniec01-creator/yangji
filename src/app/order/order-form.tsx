@@ -6,7 +6,14 @@ import type { ChangeEvent, ReactNode } from "react";
 import { submitOrder } from "@/app/order/actions";
 import { INITIAL_ORDER_FORM_STATE } from "@/app/order/form-state";
 import { MAX_QUANTITY, calcPrice, isRemoteArea } from "@/lib/orders";
-import { BOX_OPTIONS, SHIPPING, formatPrice, type BoxId } from "@/lib/products";
+import {
+  BOX_OPTIONS,
+  SELLERS,
+  SHIPPING,
+  formatPrice,
+  type BoxId,
+  type SellerId,
+} from "@/lib/products";
 
 interface DaumPostcodeResult {
   zonecode: string;
@@ -102,6 +109,7 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
     INITIAL_ORDER_FORM_STATE,
   );
 
+  const [sellerId, setSellerId] = useState<SellerId | "">("");
   const [boxId, setBoxId] = useState<BoxId>(defaultBoxId);
   const [quantity, setQuantity] = useState(1);
   const [recipientSame, setRecipientSame] = useState(true);
@@ -186,6 +194,41 @@ export function OrderForm({ defaultBoxId }: { defaultBoxId: BoxId }) {
               {state.message}
             </p>
           )}
+
+          {/* 수익 분배의 기준이 되는 값이라 놓치지 않도록 맨 위에 크게 둔다. */}
+          <fieldset className="rounded-3xl bg-peach-500 p-6 sm:p-8">
+            <legend className="sr-only">소개해 주신 분</legend>
+            <p className="text-base font-bold text-white">
+              소개해 주신 분 <span className="text-white/70">*</span>
+            </p>
+            <p className="mt-1.5 text-sm text-white/80 break-keep">
+              어느 분을 통해 알게 되셨는지 골라 주세요.
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {SELLERS.map((seller) => (
+                <label key={seller.id} className="block cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sellerId"
+                    value={seller.id}
+                    checked={seller.id === sellerId}
+                    onChange={() => setSellerId(seller.id)}
+                    className="peer sr-only"
+                  />
+                  <span className="flex h-14 items-center justify-center rounded-2xl bg-white/15 text-base font-semibold text-white ring-1 ring-white/40 transition-colors peer-checked:bg-white peer-checked:text-peach-700 peer-checked:ring-2 peer-checked:ring-white peer-focus-visible:ring-2 peer-focus-visible:ring-white">
+                    {seller.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {errors.sellerId && (
+              <p className="mt-3 rounded-xl bg-white/95 px-4 py-2.5 text-sm font-medium text-red-600">
+                {errors.sellerId}
+              </p>
+            )}
+          </fieldset>
 
           <SectionCard step={1} title="주문자 정보">
             <Field

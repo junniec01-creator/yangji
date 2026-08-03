@@ -5,13 +5,15 @@ import {
   type OrderFilter,
   type OrderStatus,
 } from "@/lib/orders";
-import type { BoxId } from "@/lib/products";
+import { SELLERS, type BoxId, type SellerId } from "@/lib/products";
 import { createServiceClient } from "@/lib/supabase";
 
 export interface OrderRow {
   id: string;
   order_no: string;
   status: OrderStatus;
+  /** 빈 문자열이면 이 기능이 생기기 전 주문(= 미지정). */
+  seller_id: string;
   orderer_name: string;
   orderer_phone: string;
   depositor_name: string;
@@ -32,10 +34,13 @@ export interface OrderRow {
 }
 
 const COLUMNS =
-  "id, order_no, status, orderer_name, orderer_phone, depositor_name, box_id, quantity, unit_price, shipping_fee, total_price, recipient_same, recipient_name, recipient_phone, postcode, address1, address2, is_remote_area, memo, created_at";
+  "id, order_no, status, seller_id, orderer_name, orderer_phone, depositor_name, box_id, quantity, unit_price, shipping_fee, total_price, recipient_same, recipient_name, recipient_phone, postcode, address1, address2, is_remote_area, memo, created_at";
 
-/** 최신 주문부터. filter를 주면 해당 상태만 걸러낸다. */
-export async function fetchOrders(filter?: OrderFilter): Promise<OrderRow[]> {
+/** 최신 주문부터. filter는 상태, seller는 판매자로 걸러낸다. */
+export async function fetchOrders(
+  filter?: OrderFilter,
+  seller?: SellerId,
+): Promise<OrderRow[]> {
   const supabase = createServiceClient();
   let query = supabase
     .from("orders")
@@ -47,6 +52,8 @@ export async function fetchOrders(filter?: OrderFilter): Promise<OrderRow[]> {
   } else if (filter) {
     query = query.eq("status", filter);
   }
+
+  if (seller) query = query.eq("seller_id", seller);
 
   const { data, error } = await query;
 
@@ -61,6 +68,8 @@ export async function fetchOrders(filter?: OrderFilter): Promise<OrderRow[]> {
 export interface OrderSummary {
   /** 상태별 주문 건수. 필터 탭에 표시한다. */
   counts: Record<string, number>;
+  /** 판매자별 주문 건수. 취소도 포함한 전체 기준. */
+  sellerCounts: Record<string, number>;
   totalCount: number;
   /** 취소를 뺀 박스 개수 합계 — 실제로 몇 박스를 따야 하는지. */
   totalBoxes: number;
@@ -84,6 +93,7 @@ export interface OrderSummary {
 
 const EMPTY_SUMMARY: OrderSummary = {
   counts: {},
+  sellerCounts: {},
   totalCount: 0,
   totalBoxes: 0,
   pendingCount: 0,
@@ -105,17 +115,25 @@ export async function fetchOrderSummary(): Promise<OrderSummary> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("status, quantity, total_price");
+    .select("status, seller_id, quantity, total_price");
 
   if (error) {
     console.error("주문 집계 조회 실패:", error.message);
     return EMPTY_SUMMARY;
   }
 
-  const summary: OrderSummary = { ...EMPTY_SUMMARY, counts: {} };
+  const summary: OrderSummary = {
+    ...EMPTY_SUMMARY,
+    counts: {},
+    sellerCounts: Object.fromEntries(
+      SELLERS.map((seller) => [seller.id, 0]),
+    ),
+  };
 
   for (const row of data ?? []) {
     summary.counts[row.status] = (summary.counts[row.status] ?? 0) + 1;
+    summary.sellerCounts[row.seller_id] =
+      (summary.sellerCounts[row.seller_id] ?? 0) + 1;
     summary.totalCount += 1;
 
     if (row.status === "cancelled") continue;

@@ -1,4 +1,4 @@
-import { BOX_OPTIONS, SHIPPING, type BoxId } from "@/lib/products";
+import { BOX_OPTIONS, SELLERS, SHIPPING, type BoxId, type SellerId } from "@/lib/products";
 
 export const ORDER_STATUSES = [
   "pending",
@@ -51,6 +51,17 @@ export const MAX_QUANTITY = 20;
 
 export function isBoxId(value: string): value is BoxId {
   return BOX_OPTIONS.some((box) => box.id === value);
+}
+
+export function isSellerId(value: string): value is SellerId {
+  return SELLERS.some((seller) => seller.id === value);
+}
+
+/** 관리자 화면의 판매자 필터. 알 수 없는 값이면 undefined(= 전체). */
+export function parseSellerId(
+  value: string | null | undefined,
+): SellerId | undefined {
+  return value && isSellerId(value) ? value : undefined;
 }
 
 export interface PriceBreakdown {

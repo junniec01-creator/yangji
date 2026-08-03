@@ -2,8 +2,12 @@ import type { NextRequest } from "next/server";
 import { toCsv } from "@/lib/csv";
 import { formatKst } from "@/lib/kst";
 import { fetchOrders } from "@/lib/order-queries";
-import { ORDER_STATUS_LABEL, parseOrderFilter } from "@/lib/orders";
-import { BOX_OPTIONS } from "@/lib/products";
+import {
+  ORDER_STATUS_LABEL,
+  parseOrderFilter,
+  parseSellerId,
+} from "@/lib/orders";
+import { BOX_OPTIONS, sellerName } from "@/lib/products";
 import { requireAdmin } from "@/lib/supabase-auth";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +16,7 @@ const HEADERS = [
   "주문번호",
   "주문일시",
   "상태",
+  "판매자",
   "주문자",
   "주문자 연락처",
   "입금자명",
@@ -32,13 +37,16 @@ const HEADERS = [
 export async function GET(request: NextRequest) {
   await requireAdmin();
 
-  const filter = parseOrderFilter(request.nextUrl.searchParams.get("status"));
-  const orders = await fetchOrders(filter);
+  const params = request.nextUrl.searchParams;
+  const filter = parseOrderFilter(params.get("status"));
+  const seller = parseSellerId(params.get("seller"));
+  const orders = await fetchOrders(filter, seller);
 
   const rows = orders.map((order) => [
     order.order_no,
     formatKst(order.created_at),
     ORDER_STATUS_LABEL[order.status],
+    sellerName(order.seller_id),
     order.orderer_name,
     order.orderer_phone,
     order.depositor_name,
@@ -56,7 +64,8 @@ export async function GET(request: NextRequest) {
     order.memo,
   ]);
 
-  const filename = `orders-${filter ?? "all"}-${formatKst(new Date().toISOString()).slice(0, 10)}.csv`;
+  const scope = [seller ?? "all", filter ?? "all"].join("-");
+  const filename = `orders-${scope}-${formatKst(new Date().toISOString()).slice(0, 10)}.csv`;
 
   return new Response(toCsv(HEADERS, rows), {
     headers: {

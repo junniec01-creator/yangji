@@ -10,7 +10,7 @@ import { AdminHeader } from "@/app/admin/admin-header";
 import { ConfirmForm } from "@/app/admin/confirm-form";
 import { formatKst } from "@/lib/kst";
 import { fetchOrders, type OrderRow } from "@/lib/order-queries";
-import { BOX_OPTIONS, formatPrice } from "@/lib/products";
+import { BOX_OPTIONS, formatPrice, sellerName } from "@/lib/products";
 import { requireAdmin } from "@/lib/supabase-auth";
 
 export const metadata: Metadata = {
@@ -237,6 +237,9 @@ function CardHead({ order }: { order: OrderRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-bark-900 tabular-nums">
           {order.order_no}
+        </span>
+        <span className="rounded-full bg-peach-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+          {sellerName(order.seller_id)}
         </span>
         {!order.recipient_same && (
           <span className="rounded-full bg-peach-50 px-2.5 py-0.5 text-xs text-peach-700">

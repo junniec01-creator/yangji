@@ -7,6 +7,7 @@ import {
   calcPrice,
   isBoxId,
   isRemoteArea,
+  isSellerId,
   normalizePhone,
 } from "@/lib/orders";
 import { getSiteSettings } from "@/lib/site-settings";
@@ -33,6 +34,12 @@ export async function submitOrder(
   }
 
   const fieldErrors: Record<string, string> = {};
+
+  // 판매자 — 수익 분배의 기준이라 기본값 없이 반드시 고르게 한다.
+  const sellerId = text(formData, "sellerId");
+  if (!isSellerId(sellerId)) {
+    fieldErrors.sellerId = "소개해 주신 분을 선택해 주세요.";
+  }
 
   // 주문자
   const ordererName = text(formData, "ordererName");
@@ -119,6 +126,7 @@ export async function submitOrder(
     const { data, error } = await supabase
       .from("orders")
       .insert({
+        seller_id: sellerId,
         orderer_name: ordererName,
         orderer_phone: ordererPhone,
         depositor_name: depositorName,

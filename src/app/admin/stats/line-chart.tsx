@@ -29,7 +29,7 @@ function niceStep(value: number): number {
 }
 
 /** 눈금이 딱 떨어지도록 간격을 먼저 정하고 최대값을 그 배수로 잡는다. */
-function axisMax(peak: number, format: ChartFormat): number {
+export function axisMax(peak: number, format: ChartFormat): number {
   const step = niceStep(peak / TICKS);
   // 박스는 개수라 소수 눈금이 나오면 안 된다.
   return (format === "boxes" ? Math.max(1, Math.ceil(step)) : step) * TICKS;
@@ -55,14 +55,20 @@ export function LineChart({
   title,
   points,
   format,
+  sharedMax,
 }: {
   title: string;
   points: ChartPoint[];
   format: ChartFormat;
+  /**
+   * 두 그래프를 나란히 놓고 눈으로 비교할 때는 세로축을 맞춰야 한다.
+   * 각자 축을 잡으면 3박스와 30박스가 같은 높이로 그려져 잘못 읽힌다.
+   */
+  sharedMax?: number;
 }) {
   const total = points.reduce((sum, point) => sum + point.value, 0);
   const peak = points.reduce((max, point) => Math.max(max, point.value), 0);
-  const max = axisMax(peak, format);
+  const max = sharedMax ?? axisMax(peak, format);
   const count = points.length;
 
   const xOf = (index: number) =>
