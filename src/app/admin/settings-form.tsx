@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { updateSettings } from "@/app/admin/actions";
 import { INITIAL_ADMIN_FORM_STATE } from "@/app/admin/form-state";
 import type { SiteSettings } from "@/lib/site-settings";
@@ -45,7 +45,6 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
     updateSettings,
     INITIAL_ADMIN_FORM_STATE,
   );
-  const [isOrderOpen, setIsOrderOpen] = useState(settings.isOrderOpen);
 
   return (
     <form
@@ -74,8 +73,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
         <input
           type="checkbox"
           name="isOrderOpen"
-          checked={isOrderOpen}
-          onChange={(event) => setIsOrderOpen(event.target.checked)}
+          defaultChecked={settings.isOrderOpen}
           className="mt-0.5 h-4 w-4 accent-peach-500"
         />
         <span>
