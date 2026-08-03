@@ -12,8 +12,8 @@ export const SITE = {
   tagline: "나무에서 익힌 복숭아",
   description:
     "새벽에 따서 그날 보내는 산지 직송 복숭아. 백도와 황도를 한 상자씩 손으로 골라 담습니다.",
-  phone: "010-1234-5678",
-  address: "충청북도 영동군 영동읍 계산리 123-4",
+  phone: "010-2430-3844",
+  address: "강원특별자치도 양양군 서면 용천2길 18 (용천리) 양지농원",
 } as const;
 
 export type SellerId = "keum" | "park";
