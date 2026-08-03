@@ -95,19 +95,51 @@ create table if not exists public.site_settings (
   is_order_open  boolean not null default true,
   closed_message text not null default '올해 수확이 마감되었습니다. 내년 여름에 다시 찾아주세요.',
 
-  -- 입금 계좌 안내
-  bank_name      text not null default '',
-  bank_account   text not null default '',
-  bank_holder    text not null default '',
-
   updated_at     timestamptz not null default now()
 );
 
 insert into public.site_settings (id) values (1) on conflict (id) do nothing;
 
+-- 보내는 사람. 택배 송장에 들어가며 농장 하나로 공통이다.
+alter table public.site_settings
+  add column if not exists sender_name     text not null default '',
+  add column if not exists sender_phone    text not null default '',
+  add column if not exists sender_postcode text not null default '',
+  add column if not exists sender_address1 text not null default '',
+  add column if not exists sender_address2 text not null default '';
+
+-- 입금 계좌는 판매자마다 다르므로 seller_settings로 옮겼다.
+alter table public.site_settings
+  drop column if exists bank_name,
+  drop column if exists bank_account,
+  drop column if exists bank_holder;
+
 drop trigger if exists site_settings_touch_updated_at on public.site_settings;
 create trigger site_settings_touch_updated_at
   before update on public.site_settings
+  for each row execute function public.touch_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 판매자별 입금 계좌
+--
+-- 주문서에서 고른 판매자에 따라 주문 완료 화면에 다른 계좌가 뜬다.
+-- 판매자 명단(id·이름)은 src/lib/products.ts의 SELLERS에 있고, 여기에는
+-- 관리자가 화면에서 고쳐야 하는 값만 둔다.
+-- ---------------------------------------------------------------------------
+create table if not exists public.seller_settings (
+  seller_id    text primary key,
+  bank_name    text not null default '',
+  bank_account text not null default '',
+  bank_holder  text not null default '',
+  updated_at   timestamptz not null default now()
+);
+
+insert into public.seller_settings (seller_id) values ('keum'), ('park')
+  on conflict (seller_id) do nothing;
+
+drop trigger if exists seller_settings_touch_updated_at on public.seller_settings;
+create trigger seller_settings_touch_updated_at
+  before update on public.seller_settings
   for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------------
@@ -149,4 +181,5 @@ create trigger kakao_recipients_touch_updated_at
 -- ---------------------------------------------------------------------------
 alter table public.orders           enable row level security;
 alter table public.site_settings    enable row level security;
+alter table public.seller_settings  enable row level security;
 alter table public.kakao_recipients enable row level security;

@@ -65,8 +65,11 @@ export default async function AdminOrdersPage({
   const statusHref = (value?: OrderFilter) =>
     href("/admin/orders", value, seller);
   const sellerHref = (value?: string) => href("/admin/orders", filter, value);
-  const csvHref = (value?: OrderFilter) =>
-    href("/api/admin/orders/export", value, seller);
+  const exportHref = (value?: OrderFilter, format?: "csv") => {
+    const base = href("/api/admin/orders/export", value, seller);
+    if (!format) return base;
+    return `${base}${base.includes("?") ? "&" : "?"}format=${format}`;
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
@@ -138,21 +141,35 @@ export default async function AdminOrdersPage({
         ))}
       </nav>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-cream-100/70 px-4 py-3 ring-1 ring-cream-200">
-        <span className="mr-1 text-xs font-semibold text-bark-500">
-          CSV 내려받기
-          {seller && (
-            <span className="ml-1 text-peach-700">· {sellerName(seller)}</span>
-          )}
-        </span>
-        <CsvLink href={csvHref()} label="전체" />
-        {ORDER_FILTERS.map((value) => (
-          <CsvLink
-            key={value}
-            href={csvHref(value)}
-            label={ORDER_FILTER_LABEL[value]}
-          />
-        ))}
+      <div className="mt-4 rounded-2xl bg-cream-100/70 px-4 py-3 ring-1 ring-cream-200">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-semibold text-bark-500">
+            엑셀 내려받기
+            {seller && (
+              <span className="ml-1 text-peach-700">· {sellerName(seller)}</span>
+            )}
+          </span>
+          <DownloadLink href={exportHref()} label="전체" />
+          {ORDER_FILTERS.map((value) => (
+            <DownloadLink
+              key={value}
+              href={exportHref(value)}
+              label={ORDER_FILTER_LABEL[value]}
+            />
+          ))}
+        </div>
+
+        <p className="mt-2.5 text-xs text-bark-400">
+          보내는 분·받는 분 주소가 모두 들어갑니다. 택배사 양식이 CSV만
+          받으면{" "}
+          <a
+            href={exportHref(filter, "csv")}
+            className="font-medium text-bark-600 underline underline-offset-4 hover:text-peach-700"
+          >
+            CSV로 받기
+          </a>
+          .
+        </p>
       </div>
 
       <div className="mt-5 space-y-4">
@@ -295,7 +312,7 @@ function FilterTab({
  * 건수는 붙이지 않는다. 판매자 필터가 걸리면 전체 기준 집계와 달라져서
  * 오히려 잘못 읽히기 때문이다.
  */
-function CsvLink({ href, label }: { href: string; label: string }) {
+function DownloadLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}

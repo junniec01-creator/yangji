@@ -167,6 +167,10 @@ export async function submitOrder(
     };
   }
 
+  // 완료 화면에서 계좌를 고르는 데 쓴다. 주문번호로 다시 조회하지 않는 이유는
+  // 주문번호가 순번이라 남의 주문을 들여다볼 여지를 주지 않기 위해서다.
+  const query = new URLSearchParams({ no: orderNo, seller: sellerId });
+
   // redirect는 예외를 던져 흐름을 끊으므로 try 바깥에서 호출한다.
-  redirect(`/order/complete?no=${encodeURIComponent(orderNo)}`);
+  redirect(`/order/complete?${query}`);
 }

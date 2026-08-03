@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { AdminFormState } from "@/app/admin/form-state";
 import { notifyAll, removeRecipient } from "@/lib/kakao";
-import { ORDER_STATUSES, type OrderStatus } from "@/lib/orders";
+import { ORDER_STATUSES, isSellerId, type OrderStatus } from "@/lib/orders";
 import { BOX_OPTIONS, formatPrice } from "@/lib/products";
 import { createAuthClient, requireAdmin } from "@/lib/supabase-auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -199,9 +199,11 @@ export async function updateSettings(
   const payload = {
     is_order_open: formData.get("isOrderOpen") === "on",
     closed_message: String(formData.get("closedMessage") ?? "").trim(),
-    bank_name: String(formData.get("bankName") ?? "").trim(),
-    bank_account: String(formData.get("bankAccount") ?? "").trim(),
-    bank_holder: String(formData.get("bankHolder") ?? "").trim(),
+    sender_name: String(formData.get("senderName") ?? "").trim(),
+    sender_phone: String(formData.get("senderPhone") ?? "").trim(),
+    sender_postcode: String(formData.get("senderPostcode") ?? "").trim(),
+    sender_address1: String(formData.get("senderAddress1") ?? "").trim(),
+    sender_address2: String(formData.get("senderAddress2") ?? "").trim(),
   };
 
   if (!payload.closed_message) {
@@ -221,6 +223,39 @@ export async function updateSettings(
 
   revalidatePath("/admin/settings");
   revalidatePath("/order");
+
+  return { message: "저장했습니다.", ok: true };
+}
+
+/** 판매자 한 명의 입금 계좌. 주문 완료 화면에 그대로 나간다. */
+export async function updateSellerAccount(
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> {
+  await requireAdmin();
+
+  const sellerId = String(formData.get("sellerId") ?? "");
+  if (!isSellerId(sellerId)) {
+    return { message: "알 수 없는 판매자입니다.", ok: false };
+  }
+
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("seller_settings").upsert(
+    {
+      seller_id: sellerId,
+      bank_name: String(formData.get("bankName") ?? "").trim(),
+      bank_account: String(formData.get("bankAccount") ?? "").trim(),
+      bank_holder: String(formData.get("bankHolder") ?? "").trim(),
+    },
+    { onConflict: "seller_id" },
+  );
+
+  if (error) {
+    console.error("판매자 계좌 저장 실패:", error.message);
+    return { message: "계좌를 저장하지 못했습니다.", ok: false };
+  }
+
+  revalidatePath("/admin/settings");
 
   return { message: "저장했습니다.", ok: true };
 }

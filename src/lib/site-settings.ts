@@ -4,10 +4,16 @@ import { createServiceClient } from "@/lib/supabase";
 export interface SiteSettings {
   isOrderOpen: boolean;
   closedMessage: string;
-  bankName: string;
-  bankAccount: string;
-  bankHolder: string;
+  /** 택배 송장의 보내는 사람. 농장 하나로 공통이다. */
+  senderName: string;
+  senderPhone: string;
+  senderPostcode: string;
+  senderAddress1: string;
+  senderAddress2: string;
 }
+
+const COLUMNS =
+  "is_order_open, closed_message, sender_name, sender_phone, sender_postcode, sender_address1, sender_address2";
 
 /**
  * site_settings 테이블의 단일 행(id = 1)을 읽는다.
@@ -19,9 +25,7 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
     const supabase = createServiceClient();
     const { data, error } = await supabase
       .from("site_settings")
-      .select(
-        "is_order_open, closed_message, bank_name, bank_account, bank_holder",
-      )
+      .select(COLUMNS)
       .eq("id", 1)
       .single();
 
@@ -33,9 +37,11 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
     return {
       isOrderOpen: data.is_order_open,
       closedMessage: data.closed_message,
-      bankName: data.bank_name,
-      bankAccount: data.bank_account,
-      bankHolder: data.bank_holder,
+      senderName: data.sender_name,
+      senderPhone: data.sender_phone,
+      senderPostcode: data.sender_postcode,
+      senderAddress1: data.sender_address1,
+      senderAddress2: data.sender_address2,
     };
   } catch (cause) {
     console.error(

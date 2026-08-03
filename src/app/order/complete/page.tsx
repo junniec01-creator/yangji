@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SHIPPING, SITE } from "@/lib/products";
-import { getSiteSettings } from "@/lib/site-settings";
+import { parseSellerId } from "@/lib/orders";
+import { SHIPPING, SITE, sellerName } from "@/lib/products";
+import { getSellerAccount } from "@/lib/seller-settings";
 
 export const metadata: Metadata = {
   title: "주문 접수 완료",
@@ -12,18 +13,18 @@ export const dynamic = "force-dynamic";
 /**
  * 주문번호는 순번이라 추측이 가능하므로, 이 화면에서는 주문번호와 입금 안내만
  * 보여주고 주문자·배송지 같은 개인정보는 조회하지 않는다.
+ * 계좌도 주문을 다시 뒤지지 않고, 접수 직후 넘겨받은 판매자로만 고른다.
  */
 export default async function OrderCompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ no?: string }>;
+  searchParams: Promise<{ no?: string; seller?: string }>;
 }) {
-  const [{ no }, settings] = await Promise.all([
-    searchParams,
-    getSiteSettings(),
-  ]);
+  const { no, seller: sellerParam } = await searchParams;
+  const seller = parseSellerId(sellerParam);
+  const account = seller ? await getSellerAccount(seller) : null;
 
-  const hasBankInfo = Boolean(settings?.bankAccount);
+  const hasBankInfo = Boolean(account?.bankAccount);
 
   return (
     <div className="mx-auto max-w-xl px-5 py-16 sm:py-24">
@@ -55,23 +56,28 @@ export default async function OrderCompletePage({
       <section className="mt-4 rounded-3xl bg-white p-7 ring-1 ring-cream-200">
         <h2 className="font-display text-lg font-bold text-bark-900">
           입금 계좌
+          {seller && (
+            <span className="ml-2 text-sm font-medium text-peach-600">
+              {sellerName(seller)}
+            </span>
+          )}
         </h2>
         {hasBankInfo ? (
           <dl className="mt-6 space-y-3.5 text-sm">
             <div className="flex gap-5">
               <dt className="w-16 shrink-0 text-bark-400">은행</dt>
-              <dd className="font-medium text-bark-800">{settings?.bankName}</dd>
+              <dd className="font-medium text-bark-800">{account?.bankName}</dd>
             </div>
             <div className="flex gap-5">
               <dt className="w-16 shrink-0 text-bark-400">계좌번호</dt>
               <dd className="font-medium text-bark-800 tabular-nums">
-                {settings?.bankAccount}
+                {account?.bankAccount}
               </dd>
             </div>
             <div className="flex gap-5">
               <dt className="w-16 shrink-0 text-bark-400">예금주</dt>
               <dd className="font-medium text-bark-800">
-                {settings?.bankHolder}
+                {account?.bankHolder}
               </dd>
             </div>
           </dl>
